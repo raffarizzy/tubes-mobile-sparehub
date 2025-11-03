@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_sparehub/data/KeranjangData.dart';
 import 'package:tubes_sparehub/pages/halaman_checkout.dart';
 import 'package:tubes_sparehub/data/TokoData.dart';
 import 'package:tubes_sparehub/data/RatingData.dart';
+import 'package:tubes_sparehub/data/KeranjangData.dart'; // Import data keranjang
 import 'package:tubes_sparehub/pages/keranjang.dart';
 
 // Halaman Detail Produk - Menampilkan informasi lengkap produk
@@ -40,6 +40,31 @@ class _DetailProdukState extends State<DetailProduk> {
     return ratingList
         .where((rating) => rating['produkId'] == produkId)
         .toList();
+  }
+
+  // Fungsi untuk menambahkan produk ke keranjang
+  // Cek apakah produk sudah ada, jika ya tambah quantity, jika tidak tambah item baru
+  void tambahKeKeranjang(int userId, int produkId, int jumlahTambahan) {
+    // Cari apakah produk sudah ada di keranjang untuk user ini
+    int indexProduk = keranjang.indexWhere(
+      (item) => item['userId'] == userId && item['produkId'] == produkId,
+    );
+
+    if (indexProduk != -1) {
+      // Produk sudah ada di keranjang, tambah quantity-nya
+      setState(() {
+        keranjang[indexProduk]['jumlah'] += jumlahTambahan;
+      });
+    } else {
+      // Produk belum ada di keranjang, tambah item baru
+      setState(() {
+        keranjang.add({
+          'userId': userId,
+          'produkId': produkId,
+          'jumlah': jumlahTambahan,
+        });
+      });
+    }
   }
 
   @override
@@ -144,7 +169,7 @@ class _DetailProdukState extends State<DetailProduk> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  //GAMBAR PRODUK
+                  // GAMBAR PRODUK
                   Center(
                     child: Container(
                       height: 200,
@@ -177,7 +202,7 @@ class _DetailProdukState extends State<DetailProduk> {
 
                   const SizedBox(height: 20),
 
-                  //NAMA PRODUK
+                  // NAMA PRODUK
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
@@ -223,7 +248,7 @@ class _DetailProdukState extends State<DetailProduk> {
 
                   const SizedBox(height: 16),
 
-                  // SECTION: QUANTITY SELECTOR (Tambah/Kurang)
+                  // QUANTITY SELECTOR (Tambah/Kurang)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
@@ -342,7 +367,7 @@ class _DetailProdukState extends State<DetailProduk> {
 
                   const SizedBox(height: 16),
 
-                  //INFO TOKO
+                  // INFO TOKO
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
@@ -392,7 +417,7 @@ class _DetailProdukState extends State<DetailProduk> {
 
                   const SizedBox(height: 24),
 
-                  //DESKRIPSI PRODUK
+                  // DESKRIPSI PRODUK
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
@@ -424,7 +449,7 @@ class _DetailProdukState extends State<DetailProduk> {
 
                   const SizedBox(height: 16),
 
-                  //RATING
+                  // RATING (Rata-rata)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
@@ -454,7 +479,7 @@ class _DetailProdukState extends State<DetailProduk> {
 
                   const SizedBox(height: 16),
 
-                  //ULASAN PENGGUNA
+                  // ULASAN PENGGUNA
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
@@ -499,18 +524,23 @@ class _DetailProdukState extends State<DetailProduk> {
 
                   const SizedBox(height: 16),
 
-                  //TOMBOL TAMBAH KE KERANJANG
+                  // TOMBOL TAMBAH KE KERANJANG
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: SizedBox(
                       width: double.infinity, // Full width
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          keranjang.add({
-                            'userId': 1,
-                            'produkId': widget.product['id'],
-                            'jumlah': 1,
-                          });
+                          // Panggil fungsi tambahKeKeranjang
+                          // userId = 1 (hardcode, bisa diganti dengan userId yang login)
+                          // produkId = ID produk ini
+                          // quantity = jumlah yang mau ditambahkan
+                          tambahKeKeranjang(
+                            1, // userId (ganti dengan user yang login nanti)
+                            widget.product['id'],
+                            quantity,
+                          );
+
                           // Tambah quantity ke cart counter
                           setState(() {
                             cartItemCount += quantity;
