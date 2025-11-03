@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/data/ProductData.dart'; // pastikan file ini ada
 import 'package:tubes_sparehub/pages/detail_produk.dart'; // Import halaman detail produk
+import 'package:tubes_sparehub/pages/keranjang.dart'; // TAMBAHAN IMPORT
 
 class HomePage extends StatefulWidget {
   // Opsional: terima data user dari login (kalo mau dipake)
@@ -24,6 +25,24 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           backgroundColor: const Color(0xFF122C4F),
+          // TAMBAHAN ACTIONS UNTUK TOMBOL KERANJANG
+          actions: [
+            IconButton(
+              icon: const Icon(
+                Icons.shopping_cart,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                // Navigate ke halaman keranjang
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const KeranjangPage(),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),

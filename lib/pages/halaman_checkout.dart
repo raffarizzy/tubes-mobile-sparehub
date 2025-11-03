@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/main.dart';
 import 'package:tubes_sparehub/pages/homepage.dart';
 import 'homepage.dart';
+import 'package:tubes_sparehub/data/KeranjangData.dart'; 
 
 class CheckoutPage extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -210,6 +211,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
+                // CLEAR KERANJANG
+                keranjang.clear();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Pembayaran Berhasil!')),
                 );

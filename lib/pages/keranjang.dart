@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/data/KeranjangData.dart';
 import 'package:tubes_sparehub/data/ProductData.dart';
 import 'package:tubes_sparehub/data/UserData.dart';
+import 'package:tubes_sparehub/pages/halaman_checkout.dart';
 
 void main() {
   runApp(const KeranjangApp());
@@ -163,10 +164,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
           const SizedBox(height: 16),
           Text(
             'Keranjang Anda Kosong',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -367,8 +365,40 @@ class _KeranjangPageState extends State<KeranjangPage> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Proses Checkout dimulai...')),
+                // Validasi keranjang kosong
+                if (keranjang.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Keranjang masih kosong!')),
+                  );
+                  return;
+                }
+
+                // Konversi isi keranjang ke format untuk CheckoutPage
+                List<Map<String, dynamic>> cartItems = [];
+
+                for (var item in keranjang) {
+                  final produk = getProductById(item['produkId']);
+
+                  // Skip jika produk tidak ditemukan
+                  if (produk == null) continue;
+
+                  // Tambah ke cartItems dengan format yang benar
+                  cartItems.add({
+                    'id': produk['id'],
+                    'nama': produk['nama'],
+                    'imagePath': produk['imagePath'],
+                    'hargaAsli': produk['harga'], // Harga asli
+                    'diskon': produk['diskon'] ?? 0.0, // Diskon (default 0)
+                    'jumlah': item['jumlah'], // Jumlah yang dibeli
+                  });
+                }
+
+                // Navigate ke halaman Checkout
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CheckoutPage(cartItems: cartItems),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
