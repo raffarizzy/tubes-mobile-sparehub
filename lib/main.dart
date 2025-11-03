@@ -4,6 +4,7 @@ import 'package:tubes_sparehub/pages/halaman_profil/halaman_edit_profil.dart';
 import 'package:tubes_sparehub/pages/homepage.dart';
 import 'package:tubes_sparehub/pages/halaman_toko.dart';
 import 'package:tubes_sparehub/pages/halaman_LoginAndRegister/login.dart';
+import 'package:tubes_sparehub/pages/halaman_profil/halaman_saya.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,8 +20,8 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       // Pilih halaman awal yang mau ditampilkan
       // home: ShopPage(),
-      // home: LoginPage(),
-      home: MyHomePage(title: 'SpareHub'),
+      home: LoginPage(),
+      // home: MyHomePage(title: 'SpareHub'),
     );
   }
 }
@@ -38,11 +39,18 @@ class _MyHomePageState extends State<MyHomePage> {
   final PageController _pageController = PageController(initialPage: 1);
   int _selectedIndex = 1;
 
-  final List<Widget> _pages = [
-    toko_saya(), // Toko Saya (halaman Rziqi)
-    const HomePage(), // Home (grid produk)
-    const EditProfil(), // Profil
-  ];
+
+  final List<Widget> _pages = [];
+  @override
+  void initState() {
+    super.initState();
+    _pages.addAll([
+      toko_saya(), // halaman toko
+      const HomePage(), // homepage
+      HalamanSaya(userData: widget.userData), // kirim userData ke sini
+    ]);
+  }
+
 
   void _onItemTapped(int index) {
     setState(() {

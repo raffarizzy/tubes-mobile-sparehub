@@ -49,18 +49,6 @@ class _Tambah extends State<Tambah> {
                 ),
               ),
               SizedBox(height: 20),
-
-              // TextFormField(
-              //   controller: _idController,
-              //   decoration: InputDecoration(
-              //     labelText: 'id Produk',
-              //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              //     filled: true,
-              //     fillColor: Colors.white,
-              //   ),
-              //   validator: (value) => value!.isEmpty ? 'Masukkan id produk' : null,
-              // ),
-              // SizedBox(height: 16),
               
               TextFormField(
                 controller: _namaController,
