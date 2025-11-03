@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/ProductData.dart';
+import 'package:tubes_sparehub/data/ProductData.dart';
 
 class Tambah extends StatefulWidget {
   @override

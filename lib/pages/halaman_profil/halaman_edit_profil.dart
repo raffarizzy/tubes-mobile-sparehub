@@ -44,13 +44,17 @@ class _EditProfilState extends State<EditProfil> {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context), 
+            icon: Icon(Icons.arrow_back, color: Colors.white)
+          ),
           title: const Text(
             "Edit Profil", 
             style: TextStyle(
               color: Colors.white
             ),
-            textAlign: TextAlign.center,
           ),
+          centerTitle: true,
           backgroundColor: const Color(0xFF122C4F),
         ),
         body: Padding(

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'toko_halaman/hapus.dart';
 import 'toko_halaman/lacak.dart';
 import 'toko_halaman/tambah.dart';
-import '../data/ProductData.dart';
+import 'package:tubes_sparehub/data/ProductData.dart';
 
 void main() {
   runApp(SpareShopApp());
@@ -39,6 +39,9 @@ class _tokoSayaState extends State<toko_saya> {
         'harga': harga,
         'jumlah': jumlah,
         'imagePath': 'assets/images/default_icon.png',
+        'tokoId': 1,
+        'stok': 10,
+        'kategori': 'Otomotif',
       });
     });
   }
@@ -73,11 +76,11 @@ class _tokoSayaState extends State<toko_saya> {
                   Row(
                     children: [
                       TextButton(
-                        onPressed: ()=>Navigator.pop(context), 
+                        onPressed: () => Navigator.pop(context),
                         child: Text(
                           "Kembali",
                           style: TextStyle(color: Colors.white, fontSize: 14),
-                        )
+                        ),
                       ),
                       Spacer(),
                       Text(
@@ -272,7 +275,7 @@ class _tokoSayaState extends State<toko_saya> {
                     result['nama'],
                     result['harga'],
                     result['jumlah'],
-                    result['id']
+                    result['id'],
                   );
                 }
               },

@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/data/KeranjangData.dart';
 import 'package:tubes_sparehub/data/ProductData.dart';
@@ -7,17 +9,11 @@ void main() {
   runApp(const KeranjangApp());
 }
 
-class KeranjangApp extends StatefulWidget {
+class KeranjangApp extends StatelessWidget {
   const KeranjangApp({super.key});
 
   @override
-  State<KeranjangApp> createState() => _KeranjangAppState();
-}
-
-class _KeranjangAppState extends State<KeranjangApp> {
-  @override
   Widget build(BuildContext context) {
-    // Definisi tema dan KeranjangPage sebagai halaman awal
     return MaterialApp(
       title: 'SpareHub Keranjang',
       debugShowCheckedModeBanner: false,
@@ -31,82 +27,20 @@ class _KeranjangAppState extends State<KeranjangApp> {
   }
 }
 
-// --- DUMMY DATA ---
-class CartItem {
-  final String id;
-  final String name;
-  final String imageUrl;
-  final double price;
-  int quantity;
-
-  CartItem({
-    required this.id,
-    required this.name,
-    required this.imageUrl,
-    required this.price,
-    required this.quantity,
-  });
-}
-
-List<CartItem> dummyCartItems = [
-  CartItem(
-    id: '1',
-    name: 'Kampas Rem Depan Vario 125',
-    imageUrl:
-        'https://www.hondacengkareng.com/wp-content/uploads/2017/11/Pad-Set-FR-06455KVB401-600x600.jpg',
-    price: 45000,
-    quantity: 2,
-  ),
-  CartItem(
-    id: '2',
-    name: 'Filter Udara Beat FI',
-    imageUrl: 'https://via.placeholder.com/150/FF0000/FFFFFF?text=FilterUdara',
-    price: 28000,
-    quantity: 1,
-  ),
-  CartItem(
-    id: '3',
-    name: 'Busi NGK C7HSA',
-    imageUrl: 'https://via.placeholder.com/150/008000/FFFFFF?text=Busi',
-    price: 15000,
-    quantity: 5,
-  ),
-];
-
 class KeranjangPage extends StatefulWidget {
-  const KeranjangPage({Key? key}) : super(key: key);
+  const KeranjangPage({super.key});
 
   @override
   State<KeranjangPage> createState() => _KeranjangPageState();
 }
 
 class _KeranjangPageState extends State<KeranjangPage> {
-  List<CartItem> _cartItems = List.from(dummyCartItems);
-  List<Map<String, dynamic>> getQtyByProdukId(int produkId) {
-    return keranjang
-        .where((cart) => cart['produkId'] == produkId)
-        .toList();
-  }
-  Map<String, dynamic>? getProductById(int id ) {
-    try {
-      final product = products.firstWhere((produk) => produk['id'] == id);
-      return {
-        'id': product['id'],
-        'name': product['nama'],
-        'imageUrl': product['imagePath'],
-        'price': product['harga'],
-        'quantity': getQtyByProdukId(id),
-      };
-    } catch (e) {
-      return null;
-    }
-  }
-
   final Color primaryColor = const Color(0xFF122C4F);
   final Color accentColor = const Color(0xFFE4A70D);
   final Color lightBackgroundColor = const Color(0xFFF4F6F9);
 
-  String _formatRupiah(double number) {
+  // Format harga ke bentuk rupiah
+  String _formatRupiah(int number) {
     int integerPart = number.toInt();
     String result = integerPart.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -115,31 +49,49 @@ class _KeranjangPageState extends State<KeranjangPage> {
     return result;
   }
 
-  double _calculateTotalPrice() {
-    double total = 0;
-    for (var item in _cartItems) {
-      total += item.price * item.quantity;
+  // Dapatkan produk berdasarkan ID
+  Map<String, dynamic>? getProductById(int id) {
+    try {
+      return products.firstWhere((produk) => produk['id'] == id);
+    } catch (e) {
+      return null;
     }
+  }
+
+  // Hitung total harga keranjang
+  int _calculateTotalPrice() {
+    int total = 0;
+
+    for (var item in keranjang) {
+      var produk = getProductById(item['produkId']);
+      if (produk != null) {
+        int harga = produk['harga'];
+        int jumlah = item['jumlah'];
+        total += harga * jumlah;
+      }
+    }
+
     return total;
   }
 
+  // Tambah jumlah item di keranjang
   void _incrementQuantity(int index) {
     setState(() {
-      _cartItems[index].quantity++;
-      print(getProductById(int.parse(_cartItems[index].id)));
+      keranjang[index]['jumlah']++;
     });
   }
 
+  // Kurangi jumlah item di keranjang
   void _decrementQuantity(int index) {
     setState(() {
-      if (_cartItems[index].quantity > 1) {
-        _cartItems[index].quantity--;
+      if (keranjang[index]['jumlah'] > 1) {
+        keranjang[index]['jumlah']--;
       } else {
-        final removedItemName = _cartItems[index].name;
-        _cartItems.removeAt(index);
+        final produk = getProductById(keranjang[index]['produkId']);
+        keranjang.removeAt(index);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$removedItemName dihapus dari keranjang.'),
+            content: Text('${produk?['nama']} dihapus dari keranjang.'),
             duration: const Duration(seconds: 1),
           ),
         );
@@ -147,14 +99,15 @@ class _KeranjangPageState extends State<KeranjangPage> {
     });
   }
 
+  // Hapus item
   void _removeItem(int index) {
     setState(() {
-      if (index >= 0 && index < _cartItems.length) {
-        final removedItemName = _cartItems[index].name;
-        _cartItems.removeAt(index);
+      if (index >= 0 && index < keranjang.length) {
+        final produk = getProductById(keranjang[index]['produkId']);
+        keranjang.removeAt(index);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$removedItemName dihapus dari keranjang.'),
+            content: Text('${produk?['nama']} dihapus dari keranjang.'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -167,7 +120,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
     return Scaffold(
       backgroundColor: lightBackgroundColor,
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Keranjang SpareHub',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
@@ -176,32 +129,13 @@ class _KeranjangPageState extends State<KeranjangPage> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: _cartItems.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 80,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Keranjang Anda Kosong',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              )
+        child: keranjang.isEmpty
+            ? _buildEmptyCart()
             : Column(
                 children: [
                   Expanded(
                     child: ListView.builder(
-                      itemCount: _cartItems.length,
+                      itemCount: keranjang.length,
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       itemBuilder: (context, index) {
                         return _buildCartItemCard(index);
@@ -215,14 +149,41 @@ class _KeranjangPageState extends State<KeranjangPage> {
     );
   }
 
+  // Tampilan jika keranjang kosong
+  Widget _buildEmptyCart() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.shopping_cart_outlined,
+            size: 80,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Keranjang Anda Kosong',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Kartu item di keranjang
   Widget _buildCartItemCard(int index) {
-    final item = _cartItems[index];
+    final item = keranjang[index];
+    final produk = getProductById(item['produkId']);
+
+    if (produk == null) return const SizedBox();
+
     return Dismissible(
-      key: ValueKey(item.id),
+      key: ValueKey(produk['id']),
       direction: DismissDirection.endToStart,
-      onDismissed: (direction) {
-        _removeItem(index);
-      },
+      onDismissed: (_) => _removeItem(index),
       background: Container(
         decoration: BoxDecoration(
           color: Colors.red.shade700,
@@ -245,41 +206,42 @@ class _KeranjangPageState extends State<KeranjangPage> {
           padding: const EdgeInsets.all(12.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
+            children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
-                child: Image.network(
-                  item.imageUrl,
+                child: Image.asset(
+                  produk['imagePath'],
                   width: 75,
                   height: 75,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 75,
-                    height: 75,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: Icon(
-                      Icons.two_wheeler,
-                      color: primaryColor,
-                      size: 35,
-                    ),
-                  ),
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.motorcycle,
+                          size: 75,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12.0),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
+                  children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Flexible(
                           child: Text(
-                            item.name,
+                            produk['nama'],
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -289,22 +251,19 @@ class _KeranjangPageState extends State<KeranjangPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8.0),
-                          child: Text(
-                            'Rp ${_formatRupiah(item.price * item.quantity)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                              color: accentColor,
-                            ),
+                        Text(
+                          'Rp ${_formatRupiah(produk['harga'] * item['jumlah'])}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            color: accentColor,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Rp ${_formatRupiah(item.price)}',
+                      'Rp ${_formatRupiah(produk['harga'])}',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontSize: 14,
@@ -323,17 +282,15 @@ class _KeranjangPageState extends State<KeranjangPage> {
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
+                        children: [
                           _buildQuantityButton(
                             icon: Icons.remove,
                             onPressed: () => _decrementQuantity(index),
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10.0,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
                             child: Text(
-                              '${item.quantity}',
+                              '${item['jumlah']}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -390,7 +347,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
+            children: [
               const Text(
                 'Total Harga:',
                 style: TextStyle(fontSize: 18, color: Colors.black54),
@@ -421,7 +378,6 @@ class _KeranjangPageState extends State<KeranjangPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 elevation: 4,
-                shadowColor: accentColor.withOpacity(0.5),
               ),
               child: const Text(
                 'Lanjut ke Pembayaran',

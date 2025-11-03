@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tubes_sparehub/data/KeranjangData.dart';
 import 'package:tubes_sparehub/pages/halaman_checkout.dart';
 import 'package:tubes_sparehub/data/TokoData.dart';
 import 'package:tubes_sparehub/data/RatingData.dart';
@@ -505,6 +506,11 @@ class _DetailProdukState extends State<DetailProduk> {
                       width: double.infinity, // Full width
                       child: ElevatedButton.icon(
                         onPressed: () {
+                          keranjang.add({
+                            'userId': 1,
+                            'produkId': widget.product['id'],
+                            'jumlah': 1,
+                          });
                           // Tambah quantity ke cart counter
                           setState(() {
                             cartItemCount += quantity;
