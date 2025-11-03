@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:tubes_sparehub/pages/halaman_profil/halaman_edit_profil.dart';
+import 'pages/halaman_pengguna.dart';
+import 'pages/halaman_checkout.dart';
+import 'pages/halaman_toko.dart';
 import 'pages/halaman_pengguna.dart';
 
 void main() {
@@ -13,7 +17,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
-      home: const MyHomePage(title: 'SpareHub'),
+        home: const MyHomePage(title: 'SpareHub')
+      // home: CheckoutApp(),
+      // home: ShopPage(),
     );
   }
 }
@@ -31,9 +37,21 @@ class _MyHomePageState extends State<MyHomePage> {
   final PageController _pageController = PageController();
   int _selectedIndex = 1;
   List<Widget> _pages = [
-    Page1(),
     Page2(),
+    Page1(),
+    EditProfil(),
   ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(microseconds: 300), 
+      curve: Curves.easeOut
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.store), label: "Toko Saya"),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
@@ -63,7 +82,7 @@ class Page2 extends StatelessWidget {
   Widget build(BuildContext context) { 
     return SafeArea( 
       child: Scaffold( 
-        body: Text("Profil Saya", style: TextStyle(fontSize: 28),) 
+        body: Text("Halaman Rziqi disini", style: TextStyle(fontSize: 28),) 
       ), 
     ); 
   } 

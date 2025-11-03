@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_sparehub/data.dart'; // pastikan file ini ada
+import 'package:tubes_sparehub/data/ProductData.dart'; // pastikan file ini ada
 import 'package:tubes_sparehub/pages/detail_produk.dart'; // Import halaman detail produk
 
 class Page1 extends StatefulWidget {
