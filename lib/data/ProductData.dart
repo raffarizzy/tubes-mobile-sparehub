@@ -7,7 +7,6 @@ List<Map<String, dynamic>> products = [
     'imagePath': 'assets/images/oliMobil.png',
     'tokoId': 1,
     'stok': 10,
-    'rating': 4.8,
     'kategori': 'Otomotif',
   },
   {
@@ -18,7 +17,6 @@ List<Map<String, dynamic>> products = [
     'imagePath': 'assets/images/oliMotor.png',
     'tokoId': 1,
     'stok': 20,
-    'rating': 4.6,
     'kategori': 'Otomotif',
   },
   {
@@ -29,7 +27,6 @@ List<Map<String, dynamic>> products = [
     'imagePath': 'assets/images/filterUdara.png',
     'tokoId': 2,
     'stok': 15,
-    'rating': 4.4,
     'kategori': 'Suku Cadang',
   },
 ];

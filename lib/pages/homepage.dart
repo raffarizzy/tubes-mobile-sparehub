@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/data/ProductData.dart'; // pastikan file ini ada
 import 'package:tubes_sparehub/pages/detail_produk.dart'; // Import halaman detail produk
 
-class Page1 extends StatefulWidget {
-  const Page1({super.key});
+class HomePage extends StatefulWidget {
+  // Opsional: terima data user dari login (kalo mau dipake)
+  final Map<String, dynamic>? userData;
+  
+  const HomePage({super.key, this.userData});
 
   @override
-  State<Page1> createState() => _Page1State();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _Page1State extends State<Page1> {
+class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(

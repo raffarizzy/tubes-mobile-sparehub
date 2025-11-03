@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:tubes_sparehub/pages/halaman_checkout.dart';
+import 'package:tubes_sparehub/data/TokoData.dart';
+import 'package:tubes_sparehub/data/RatingData.dart';
 
-// Halaman Detail Produk untuk E-commerce App
-// StatefulWidget karena ada state yang bisa berubah (tombol favorite)
 class DetailProduk extends StatefulWidget {
-  // Terima data produk dari halaman sebelumnya
   final Map<String, dynamic> product;
 
   const DetailProduk({super.key, required this.product});
@@ -13,62 +13,108 @@ class DetailProduk extends StatefulWidget {
 }
 
 class _DetailProdukState extends State<DetailProduk> {
-  // Variable untuk nyimpen status favorite (true/false)
-  bool isFavorite = false;
+  int cartItemCount = 0;
+  int quantity = 1;
+
+  Map<String, dynamic>? getTokoById(int id) {
+    try {
+      return tokoList.firstWhere((toko) => toko['id'] == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  List<Map<String, dynamic>> getRatingByProdukId(int produkId) {
+    return ratingList
+        .where((rating) => rating['produkId'] == produkId)
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final toko = getTokoById(widget.product['tokoId']);
+    final ratingProduk = getRatingByProdukId(widget.product['id']);
+
+    double avgRating = ratingProduk.isNotEmpty
+        ? ratingProduk.map((r) => r['rating']).reduce((a, b) => a + b) /
+              ratingProduk.length
+        : 0;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF122C4F), // Background biru custom
-      // AppBar di bagian atas
+      backgroundColor: const Color(0xFF122C4F),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF122C4F), // Biru custom
-        elevation: 0, // Hilangkan shadow
+        backgroundColor: const Color(0xFF122C4F),
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context), // Tombol kembali
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Kembali',
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
         actions: [
-          // Icon keranjang di kanan atas
-          IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-            onPressed: () {
-              // TODO: Implementasi ke halaman keranjang
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: Colors.white,
+                ),
+                onPressed: () {},
+              ),
+              if (cartItemCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      '$cartItemCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
+          const SizedBox(width: 8),
         ],
       ),
-
-      // Body yang bisa di-scroll
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Container card utama (warna abu-abu terang)
             Container(
-              margin: const EdgeInsets.all(16), // Jarak dari tepi
+              margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white, // Warna abu-abu terang
-                borderRadius: BorderRadius.circular(20), // Sudut melengkung
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // BAGIAN GAMBAR PRODUK
+                  // GAMBAR PRODUK
                   Center(
                     child: Container(
-                      height: 200, // Tinggi container gambar
+                      height: 200,
                       padding: const EdgeInsets.all(20),
                       child: Image.asset(
                         widget.product['imagePath'] ??
-                            'assets/images/oliMobil.png', // Ambil path gambar dari data
-                        fit: BoxFit
-                            .contain, // Gambar menyesuaikan ukuran container
+                            'assets/images/oliMobil.png',
+                        fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
-                          // Kalo gambar ga bisa dimuat, tampilkan placeholder
                           return Container(
                             decoration: BoxDecoration(
                               color: Colors.grey[400],
@@ -76,8 +122,7 @@ class _DetailProdukState extends State<DetailProduk> {
                             ),
                             child: const Center(
                               child: Icon(
-                                Icons
-                                    .motorcycle, // Icon motor sebagai placeholder
+                                Icons.motorcycle,
                                 size: 120,
                                 color: Colors.white70,
                               ),
@@ -88,40 +133,37 @@ class _DetailProdukState extends State<DetailProduk> {
                     ),
                   ),
 
-                  const SizedBox(height: 20), // Jarak vertikal
-                  // BAGIAN NAMA PRODUK
+                  const SizedBox(height: 20),
+                  // NAMA PRODUK
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      widget.product['nama'] ??
-                          'Nama Produk', // Ambil nama dari data
+                      widget.product['nama'] ?? 'Nama Produk',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF122C4F), // Warna teks biru custom
+                        color: Color(0xFF122C4F),
                       ),
                     ),
                   ),
 
                   const SizedBox(height: 12),
-
-                  // BAGIAN HARGA
+                  // HARGA
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: RichText(
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text:
-                                'Rp ${widget.product['harga'] ?? 0}', // Ambil harga dari data
+                            text: 'Rp ${widget.product['harga'] ?? 0}',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF122C4F), // Biru custom
+                              color: Color(0xFF122C4F),
                             ),
                           ),
                           const TextSpan(
-                            text: ' / pcs', // Satuan
+                            text: ' / pcs',
                             style: TextStyle(
                               fontSize: 14,
                               color: Color(0xFF7F8C8D),
@@ -133,19 +175,119 @@ class _DetailProdukState extends State<DetailProduk> {
                   ),
 
                   const SizedBox(height: 16),
+                  // QUANTITY
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Jumlah:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF122C4F),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Color(0xFF122C4F),
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.remove,
+                                  color: Color(0xFF122C4F),
+                                ),
+                                iconSize: 16,
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                onPressed: () {
+                                  if (quantity > 1) {
+                                    setState(() {
+                                      quantity--;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF2F5FF),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '$quantity',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF122C4F),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF122C4F),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                ),
+                                iconSize: 16,
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    quantity++;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Total: Rp ${(widget.product['harga'] ?? 0) * quantity}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF122C4F),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-                  // BAGIAN INFO TOKO
+                  const SizedBox(height: 16),
+                  // INFO TOKO
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        // Icon toko
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF122C4F,
-                            ), // Background icon biru custom
+                            color: const Color(0xFF122C4F),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(
@@ -155,21 +297,20 @@ class _DetailProdukState extends State<DetailProduk> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Nama toko & lokasi
-                        const Column(
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Toko Abah',
-                              style: TextStyle(
+                              toko?['namaToko'] ?? 'Nama Toko Tidak Ditemukan',
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF122C4F), // Biru custom
+                                color: Color(0xFF122C4F),
                               ),
                             ),
                             Text(
-                              'Jakarta',
-                              style: TextStyle(
+                              toko?['lokasi'] ?? '-',
+                              style: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF7F8C8D),
                               ),
@@ -181,8 +322,7 @@ class _DetailProdukState extends State<DetailProduk> {
                   ),
 
                   const SizedBox(height: 24),
-
-                  // BAGIAN DESKRIPSI
+                  // DESKRIPSI
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
@@ -190,167 +330,130 @@ class _DetailProdukState extends State<DetailProduk> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF122C4F), // Biru custom
+                        color: Color(0xFF122C4F),
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Isi deskripsi produk
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: Text(
-                      widget.product['deskripsi'] ??
-                          'Tidak ada deskripsi', // Ambil deskripsi dari data
+                      widget.product['deskripsi'] ?? 'Tidak ada deskripsi',
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Colors.black87, // Teks hitam
-                        height: 1.5, // Line height
+                        color: Colors.black87,
+                        height: 1.5,
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 24),
-
-                  // BAGIAN RATING
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'Rating',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF122C4F), // Biru custom
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Bintang & nilai rating
+                  const SizedBox(height: 16),
+                  // RATING
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.star,
-                          color: Colors.amber[700], // Warna bintang kuning
-                          size: 24,
-                        ),
+                        Icon(Icons.star, color: Colors.amber[700], size: 24),
                         const SizedBox(width: 8),
                         Text(
-                          '4,1',
+                          avgRating.toStringAsFixed(1),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.amber[700],
                           ),
                         ),
+                        Text(
+                          ' (${ratingProduk.length} ulasan)',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                       ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // BAGIAN ULASAN (REVIEW)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'Ulasan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF122C4F), // Biru custom
-                      ),
                     ),
                   ),
 
                   const SizedBox(height: 16),
-
-                  // BAGIAN TOMBOL-TOMBOL ACTION
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        // TOMBOL FAVORITE (LOVE)
-                        Expanded(
-                          flex: 1, // Lebar 1 bagian
-                          child: OutlinedButton(
-                            onPressed: () {
-                              // Toggle status favorite (dari false jadi true atau sebaliknya)
-                              setState(() {
-                                isFavorite = !isFavorite;
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: const BorderSide(
-                                color: Color(0xFF122C4F), // Border biru custom
-                                width: 2,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Icon(
-                              // Icon berubah tergantung status favorite
-                              isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color: isFavorite
-                                  ? Colors.red
-                                  : const Color(0xFF122C4F), // Biru custom
-                              size: 24,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 12), // Jarak horizontal
-                        // TOMBOL TAMBAH KE KERANJANG
-                        Expanded(
-                          flex:
-                              3, // Lebar 3 bagian (lebih lebar dari tombol favorite)
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // Tampilkan notifikasi (SnackBar) ketika tombol diklik
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Produk ditambahkan ke keranjang!',
-                                  ),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(
-                                0xFF122C4F,
-                              ), // Warna tombol biru custom
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: const Icon(
-                              Icons.shopping_cart,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              'Tambah ke Keranjang',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Ulasan Pengguna',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF122C4F),
+                      ),
                     ),
                   ),
 
-                  // TOMBOL BELI SEKARANG (TAMBAHAN)
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: ratingProduk.length,
+                    itemBuilder: (context, index) {
+                      final rating = ratingProduk[index];
+                      return ListTile(
+                        leading: const Icon(
+                          Icons.person,
+                          color: Colors.blueGrey,
+                        ),
+                        title: Text(
+                          rating['komentar'],
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          '${rating['rating']} ★ - ${rating['tanggal']}',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+                  // TOMBOL
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            cartItemCount += quantity;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '$quantity produk ditambahkan ke keranjang! (Total: $cartItemCount item)',
+                              ),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF122C4F),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.shopping_cart,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          'Tambah ke Keranjang',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.only(
                       left: 16,
@@ -358,53 +461,18 @@ class _DetailProdukState extends State<DetailProduk> {
                       bottom: 16,
                     ),
                     child: SizedBox(
-                      width: double.infinity, // Lebar penuh
+                      width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Tampilkan dialog konfirmasi ketika tombol diklik
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text('Beli Sekarang'),
-                                content: const Text(
-                                  'Lanjut ke halaman pembayaran?',
-                                ),
-                                actions: [
-                                  // Tombol Batal
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Batal'),
-                                  ),
-                                  // Tombol Ya (konfirmasi)
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(context); // Tutup dialog
-                                      // Tampilkan notifikasi
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Menuju halaman pembayaran...',
-                                          ),
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                    ),
-                                    child: const Text('Ya'),
-                                  ),
-                                ],
-                              );
-                            },
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CheckoutPage(),
+                            ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Colors.green, // Warna hijau biar keliatan beda
+                          backgroundColor: Colors.green,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
