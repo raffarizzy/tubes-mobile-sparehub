@@ -26,8 +26,8 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
+  const MyHomePage({super.key, required this.title, this.userData});
+  final Map<String, dynamic>? userData;
   final String title;
 
   @override

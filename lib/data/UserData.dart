@@ -16,3 +16,5 @@ List<Map<String, dynamic>> users = [
     'imagePath': 'assets/images/profile2.png',
   },
 ];
+
+Map<String, dynamic>? currentUserData = users[0];

@@ -5,7 +5,7 @@ import 'package:tubes_sparehub/pages/detail_produk.dart'; // Import halaman deta
 class HomePage extends StatefulWidget {
   // Opsional: terima data user dari login (kalo mau dipake)
   final Map<String, dynamic>? userData;
-  
+
   const HomePage({super.key, this.userData});
 
   @override
