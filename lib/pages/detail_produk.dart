@@ -467,7 +467,19 @@ class _DetailProdukState extends State<DetailProduk> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const CheckoutPage(),
+                              builder: (context) => CheckoutPage(
+                                cartItems: [
+                                  {
+                                    'nama': widget.product['nama'],
+                                    'hargaAsli':
+                                        widget.product['hargaAsli'] ??
+                                        widget.product['harga'],
+                                    'diskon': widget.product['diskon'] ?? 0,
+                                    'jumlah': quantity,
+                                    'imagePath': widget.product['imagePath'],
+                                  },
+                                ],
+                              ),
                             ),
                           );
                         },
