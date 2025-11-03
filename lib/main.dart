@@ -35,10 +35,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final PageController _pageController = PageController();
+  final PageController _pageController = PageController(initialPage: 1);
   int _selectedIndex = 1;
   final List<Widget> _pages = [
-    const Page2(), // Toko Saya (halaman Rziqi)
+    toko_saya(), // Toko Saya (halaman Rziqi)
     const HomePage(), // Home (grid produk)
     const EditProfil(), // Profil
   ];
@@ -64,7 +64,16 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => toko_saya()),
+            );
+          } else {
+            _onItemTapped(index);
+          }
+        },
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.store), label: "Toko Saya"),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),

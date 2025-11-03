@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'toko_halaman/hapus.dart';
+import 'toko_halaman/lacak.dart';
+import 'toko_halaman/tambah.dart';
+import '../data/ProductData.dart';
 
 void main() {
   runApp(SpareShopApp());
@@ -15,12 +19,36 @@ class SpareShopApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF0B2C54)),
         useMaterial3: true,
       ),
-      home: ShopPage(),
+      home: toko_saya(),
     );
   }
 }
 
-class ShopPage extends StatelessWidget {
+// PAGE TOKO
+class toko_saya extends StatefulWidget {
+  @override
+  _tokoSayaState createState() => _tokoSayaState();
+}
+
+class _tokoSayaState extends State<toko_saya> {
+  void tambahProduk(String nama, String harga, int jumlah, int id) {
+    setState(() {
+      products.add({
+        'id': id,
+        'nama': nama,
+        'harga': harga,
+        'jumlah': jumlah,
+        'imagePath': 'assets/images/default_icon.png',
+      });
+    });
+  }
+
+  void hapusProduk(int index) {
+    setState(() {
+      products.removeAt(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,9 +72,12 @@ class ShopPage extends StatelessWidget {
                   // Bar atas
                   Row(
                     children: [
-                      Text(
-                        "Kembali",
-                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      TextButton(
+                        onPressed: ()=>Navigator.pop(context), 
+                        child: Text(
+                          "Kembali",
+                          style: TextStyle(color: Colors.white, fontSize: 14),
+                        )
                       ),
                       Spacer(),
                       Text(
@@ -67,7 +98,11 @@ class ShopPage extends StatelessWidget {
                       CircleAvatar(
                         radius: 30,
                         backgroundColor: Colors.white,
-                        child: Icon(Icons.store, size: 35, color: Color(0xFF0B2C54)),
+                        child: Icon(
+                          Icons.store,
+                          size: 35,
+                          color: Color(0xFF0B2C54),
+                        ),
                       ),
                       SizedBox(width: 16),
                       Column(
@@ -87,7 +122,10 @@ class ShopPage extends StatelessWidget {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             child: Text(
                               "Lihat Ulasan",
                               style: TextStyle(
@@ -98,7 +136,7 @@ class ShopPage extends StatelessWidget {
                             ),
                           ),
                         ],
-                      )
+                      ),
                     ],
                   ),
 
@@ -117,7 +155,10 @@ class ShopPage extends StatelessWidget {
                           children: [
                             Icon(Icons.phone, color: Colors.white),
                             SizedBox(width: 8),
-                            Text("0812-3762-1829", style: TextStyle(color: Colors.white)),
+                            Text(
+                              "0812-3762-1829",
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ],
                         ),
                         SizedBox(height: 6),
@@ -140,7 +181,10 @@ class ShopPage extends StatelessWidget {
                   SizedBox(height: 10),
                   Text(
                     "Deskripsi",
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   Text(
                     "Toko ini menjual berbagai macam sparepart dengan kualitas terbaik",
@@ -167,23 +211,35 @@ class ShopPage extends StatelessWidget {
                     ),
                     SizedBox(height: 16),
 
-                    // Card produk
-                    ProductCard(
-                      title: "Cover Rack Black New Vario 125",
-                      price: "Rp 180.000 / pcs",
-                      shopName: "Toko Abah",
-                      location: "Jakarta",
-                      image: Icons.settings,
-                    ),
-
-                    SizedBox(height: 10),
-                    ProductCard(
-                      title: "Part Motor #1526",
-                      price: "Rp 220.000 / pcs",
-                      shopName: "Toko Abah",
-                      location: "Jakarta",
-                      image: Icons.build_circle,
-                    ),
+                    // Card produk (dinamis)
+                    if (products.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(40),
+                          child: Text(
+                            'Belum ada produk',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ),
+                      )
+                    else
+                      ...products.asMap().entries.map((entry) {
+                        final produk = entry.value;
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: ProductCard(
+                            title: produk['nama'],
+                            price: produk['harga'].toString() + ' / pcs',
+                            shopName: "Toko Abah",
+                            location: "Jakarta",
+                            imagePath:
+                                produk['imagePath']?.toString() ??
+                                'assets/images/default_icon.png',
+                            jumlah:
+                                int.tryParse(produk['jumlah'].toString()) ?? 1,
+                          ),
+                        );
+                      }).toList(),
                   ],
                 ),
               ),
@@ -205,9 +261,58 @@ class ShopPage extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            BottomButton(icon: Icons.add_circle_outline, label: "Tambah Produk"),
-            BottomButton(icon: Icons.local_shipping_outlined, label: "Lacak Produk"),
-            BottomButton(icon: Icons.delete_outline, label: "Hapus Produk"),
+            GestureDetector(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Tambah()),
+                );
+                if (result != null) {
+                  tambahProduk(
+                    result['nama'],
+                    result['harga'],
+                    result['jumlah'],
+                    result['id']
+                  );
+                }
+              },
+              child: BottomButton(
+                icon: Icons.add_circle_outline,
+                label: "Tambah Produk",
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Lacak()),
+                );
+              },
+              child: BottomButton(
+                icon: Icons.local_shipping_outlined,
+                label: "Lacak Produk",
+              ),
+            ),
+            GestureDetector(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HapusProdukPage(produkList: products),
+                  ),
+                );
+                if (result != null && result is int) {
+                  hapusProduk(result);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Produk berhasil dihapus')),
+                  );
+                }
+              },
+              child: BottomButton(
+                icon: Icons.delete_outline,
+                label: "Hapus Produk",
+              ),
+            ),
           ],
         ),
       ),
@@ -215,17 +320,19 @@ class ShopPage extends StatelessWidget {
   }
 }
 
-// Widget Card Produk
+// WIDGET
 class ProductCard extends StatelessWidget {
   final String title, price, shopName, location;
-  final IconData image;
+  final String imagePath;
+  final int jumlah;
 
   const ProductCard({
     required this.title,
     required this.price,
     required this.shopName,
     required this.location,
-    required this.image,
+    required this.imagePath,
+    this.jumlah = 1,
   });
 
   @override
@@ -245,16 +352,21 @@ class ProductCard extends StatelessWidget {
               color: Color(0xFFDDE8F6),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(image, color: Color(0xFF0B2C54), size: 30),
+            child: Image.asset(imagePath),
           ),
           SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text(price, style: TextStyle(color: Colors.grey[700], fontSize: 12)),
+                Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                Text(
+                  price,
+                  style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                ),
                 Row(
                   children: [
                     Icon(Icons.store, size: 14, color: Color(0xFF0B2C54)),
@@ -277,7 +389,10 @@ class ProductCard extends StatelessWidget {
               color: Color(0xFF0B2C54),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text("1", style: TextStyle(color: Colors.white)),
+            child: Text(
+              jumlah.toString(),
+              style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -298,10 +413,7 @@ class BottomButton extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, color: Colors.white, size: 26),
-        Text(
-          label,
-          style: TextStyle(color: Colors.white, fontSize: 12),
-        )
+        Text(label, style: TextStyle(color: Colors.white, fontSize: 12)),
       ],
     );
   }
