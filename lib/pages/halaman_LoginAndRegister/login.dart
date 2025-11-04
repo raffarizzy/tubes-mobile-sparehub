@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/data/UserData.dart'; // Import data user
 import 'package:tubes_sparehub/pages/homepage.dart'; // Import homepage
 import 'package:tubes_sparehub/main.dart'; // Import main untuk navigasi ke MyApp
+import 'package:tubes_sparehub/pages/halaman_LoginAndRegister/register.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -245,7 +246,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 20),
 
-                // Register Link
+                // Register Link - YANG DIUBAH
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -256,6 +257,12 @@ class _LoginPageState extends State<LoginPage> {
                     TextButton(
                       onPressed: () {
                         // Navigate ke halaman register
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterPage(),
+                          ),
+                        );
                       },
                       child: const Text(
                         'Daftar',
