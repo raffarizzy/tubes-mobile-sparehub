@@ -9,6 +9,7 @@ List<Map<String, dynamic>> products = [
     'imagePath': 'assets/images/oliMobil.png',
     'tokoId': 1,
     'stok': 10,
+    'diskon': 0.1,
     'kategori': 'Otomotif',
   },
   {

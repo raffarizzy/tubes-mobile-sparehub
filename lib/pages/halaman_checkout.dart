@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/main.dart';
-import 'package:tubes_sparehub/pages/homepage.dart';
-import 'homepage.dart';
-import 'package:tubes_sparehub/data/KeranjangData.dart'; 
+import 'package:tubes_sparehub/data/KeranjangData.dart';
+import 'package:tubes_sparehub/pages/keranjang.dart';
 
+// Halaman checkout untuk proses pembayaran
 class CheckoutPage extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
 
@@ -14,6 +14,7 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
+  // Data alamat pengiriman contoh
   final List<Map<String, String>> _addresses = [
     {
       'name': 'Bagas',
@@ -28,32 +29,62 @@ class _CheckoutPageState extends State<CheckoutPage> {
     },
   ];
 
+  // Daftar gambar metode pembayaran
   final List<String> _paymentImages = [
     'assets/images/visa.png',
     'assets/images/mastercard.png',
   ];
 
+  // Index alamat dan metode pembayaran yang dipilih
   int _selectedAddressIndex = 0;
   int _selectedPaymentIndex = 1;
 
   @override
   Widget build(BuildContext context) {
+    // Hitung total harga dan diskon
     int totalAsli = getTotalHargaAsli();
     int totalSetelahDiskon = getTotalSetelahDiskon();
     int totalDiskon = totalAsli - totalSetelahDiskon;
     int totalPembayaran = totalSetelahDiskon;
 
+    // Struktur utama halaman checkout
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: const Color(0xFF122C4F),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Checkout',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          Stack(
+            children: [
+              // Tombol ke halaman keranjang
+              IconButton(
+                icon: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const KeranjangPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
       ),
+      // Layout responsif
       body: LayoutBuilder(
         builder: (context, constraints) {
           bool isWide = constraints.maxWidth > 900;
@@ -94,15 +125,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // =========================
-  // LEFT COLUMN
-  // =========================
+  // Kolom kiri: alamat, produk, dan metode pembayaran
   Widget _buildLeftColumn() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle("Pilih Alamat Pengiriman"),
         const SizedBox(height: 12),
+        // Daftar alamat pengiriman
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -125,6 +155,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         const SizedBox(height: 24),
         _sectionTitle("Detail Produk"),
         const SizedBox(height: 12),
+        // Tampilkan item produk dari keranjang
         Column(
           children: widget.cartItems
               .map(
@@ -138,6 +169,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         const SizedBox(height: 24),
         _sectionTitle("Metode Pembayaran"),
         const SizedBox(height: 12),
+        // Pilihan metode pembayaran
         Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -156,9 +188,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // =========================
-  // RIGHT COLUMN
-  // =========================
+  // Kolom kanan: ringkasan total pembayaran
   Widget _buildRightColumn(
     int totalAsli,
     int totalDiskon,
@@ -183,13 +213,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
           _sectionTitle("Rincian Pesanan"),
           const Divider(height: 20),
           _detailRow("Harga", formatRupiah(totalAsli)),
-          _detailRow("Ongkir", "Gratis", color: Colors.green),
+          _detailRow("Biaya Pengiriman", "Gratis", color: Colors.green),
           _detailRow(
             "Diskon",
             "- ${formatRupiah(totalDiskon)}",
             color: Colors.red,
           ),
           const Divider(height: 30),
+          // Total akhir pembayaran
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -207,11 +238,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ],
           ),
           const SizedBox(height: 20),
+          // Tombol bayar sekarang
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                // CLEAR KERANJANG
                 keranjang.clear();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Pembayaran Berhasil!')),
@@ -245,9 +276,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // =========================
-  // ITEM CARD
-  // =========================
+  // Kartu tampilan produk di checkout
   Widget _itemCard(Map<String, dynamic> product) {
     double hargaAsli = (product['hargaAsli'] ?? 0).toDouble();
     double diskon = (product['diskon'] ?? 0).toDouble();
@@ -270,6 +299,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Gambar produk
           Image.asset(
             product['imagePath'] ?? '',
             width: 90,
@@ -284,15 +314,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.motorcycle, // ikon motor placeholder
+                  Icons.motorcycle,
                   color: Colors.grey,
                   size: 40,
                 ),
               );
             },
           ),
-
           const SizedBox(width: 12),
+          // Detail produk
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,13 +347,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         color: Colors.black,
                       ),
                     ),
-                    Text(
-                      formatRupiah(hargaAsli),
-                      style: const TextStyle(
-                        color: Colors.red,
-                        decoration: TextDecoration.lineThrough,
+                    if (diskon > 0)
+                      Text(
+                        formatRupiah(hargaAsli),
+                        style: const TextStyle(
+                          color: Colors.red,
+                          decoration: TextDecoration.lineThrough,
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -339,9 +370,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // =========================
-  // HELPERS
-  // =========================
+  // Fungsi format angka ke rupiah
   String formatRupiah(dynamic number) {
     int numInt = (number is double)
         ? number.round()
@@ -361,6 +390,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return 'Rp $result';
   }
 
+  // Hitung total harga asli semua produk
   int getTotalHargaAsli() {
     int total = 0;
     for (var p in widget.cartItems) {
@@ -371,6 +401,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return total;
   }
 
+  // Hitung total harga setelah diskon
   int getTotalSetelahDiskon() {
     int total = 0;
     for (var p in widget.cartItems) {
@@ -382,14 +413,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return total;
   }
 
-  // =========================
-  // UI kecil (alamat & metode)
-  // =========================
+  // Judul tiap section (alamat, produk, pembayaran)
   Widget _sectionTitle(String title) => Text(
     title,
     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
   );
 
+  // Baris detail total harga
   Widget _detailRow(String title, String value, {Color? color}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
@@ -404,6 +434,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     ),
   );
 
+  // Kartu alamat pengiriman
   Widget _addressCard({
     required int index,
     required String name,
@@ -464,6 +495,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  // Tombol tambah alamat baru
   Widget _addAddressCard() => Container(
     width: 160,
     height: 120,
@@ -479,6 +511,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     ),
   );
 
+  // Kartu metode pembayaran
   Widget _paymentCard({
     required int index,
     required String imagePath,
@@ -518,6 +551,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  // Tombol tambah metode pembayaran
   Widget _addPaymentCard() => Container(
     width: 100,
     height: 70,
