@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:tubes_sparehub/pages/halaman_checkout.dart';
 import 'package:tubes_sparehub/pages/halaman_profil/halaman_edit_profil.dart';
 import 'package:tubes_sparehub/pages/homepage.dart';
@@ -6,7 +8,9 @@ import 'package:tubes_sparehub/pages/halaman_toko.dart';
 import 'package:tubes_sparehub/pages/halaman_LoginAndRegister/login.dart';
 import 'package:tubes_sparehub/pages/halaman_profil/halaman_saya.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -39,7 +43,6 @@ class _MyHomePageState extends State<MyHomePage> {
   final PageController _pageController = PageController(initialPage: 1);
   int _selectedIndex = 1;
 
-
   final List<Widget> _pages = [];
   @override
   void initState() {
@@ -50,7 +53,6 @@ class _MyHomePageState extends State<MyHomePage> {
       HalamanSaya(userData: widget.userData), // kirim userData ke sini
     ]);
   }
-
 
   void _onItemTapped(int index) {
     setState(() {

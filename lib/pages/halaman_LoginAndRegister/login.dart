@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_sparehub/data/UserData.dart'; // Import data user
+import 'package:tubes_sparehub/services/auth_service.dart';
+import 'package:tubes_sparehub/models/user_model.dart';
+
 import 'package:tubes_sparehub/pages/homepage.dart'; // Import homepage
 import 'package:tubes_sparehub/main.dart'; // Import main untuk navigasi ke MyApp
-import 'package:tubes_sparehub/pages/halaman_LoginAndRegister/register.dart'; 
+import 'package:tubes_sparehub/pages/halaman_LoginAndRegister/register.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,6 +18,9 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  // Auth service
+  final AuthService _authService = AuthService();
+
   // Variable untuk show/hide password
   bool _obscurePassword = true;
 
@@ -23,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
   // Fungsi untuk login
-  void _login() {
+  void _login() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
@@ -39,33 +44,35 @@ class _LoginPageState extends State<LoginPage> {
 
     // Cari user di UserData
     try {
-      var user = users.firstWhere(
-        (user) => user['email'] == email && user['password'] == password,
-        orElse: () => {},
+        UserModel? user = await _authService.signInWithEmailPassword(
+        email: email,
+        password: password,
       );
 
       setState(() {
         _isLoading = false;
       });
 
-      if (user.isNotEmpty) {
+      if (user != null) {
         // Login berhasil - Navigate ke homepage
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => MyHomePage(title: 'SpareHub', userData: user),
-           
+              builder: (context) => MyHomePage(
+              title: 'SpareHub',
+              userData: user.toMap(),
+            ),
           ),
         );
       } else {
         // Login gagal
-        _showErrorDialog('Email atau password salah!');
+        _showErrorDialog('Login gagal. User tidak ditemukan.');
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      _showErrorDialog('Terjadi kesalahan. Silakan coba lagi.');
+      _showErrorDialog(e.toString());
     }
   }
 

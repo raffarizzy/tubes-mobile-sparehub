@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_sparehub/data/UserData.dart';
+import 'package:tubes_sparehub/services/auth_service.dart';
+import 'package:tubes_sparehub/models/user_model.dart';
 import 'package:tubes_sparehub/pages/halaman_LoginAndRegister/login.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -14,8 +15,12 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _alamatController = TextEditingController();
+
+  // Auth service
+  final AuthService _authService = AuthService();
 
   // Variables
   bool _obscurePassword = true;
@@ -23,7 +28,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
 
   // Fungsi untuk register
-  void _register() {
+  void _register() async {
     String nama = _namaController.text.trim();
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
@@ -31,7 +36,11 @@ class _RegisterPageState extends State<RegisterPage> {
     String alamat = _alamatController.text.trim();
 
     // Validasi input kosong
-    if (nama.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty || alamat.isEmpty) {
+    if (nama.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty ||
+        alamat.isEmpty) {
       _showErrorDialog('Semua field harus diisi!');
       return;
     }
@@ -58,38 +67,32 @@ class _RegisterPageState extends State<RegisterPage> {
       _isLoading = true;
     });
 
-    // Cek apakah email sudah terdaftar
-    bool emailExists = users.any((user) => user['email'] == email);
+    // Register dengan Firebase Auth
+    try {
+      UserModel? newUser = await _authService.registerWithEmailPassword(
+        email: email,
+        password: password,
+        nama: nama,
+        alamat: alamat,
+      );
 
-    if (emailExists) {
+  
       setState(() {
         _isLoading = false;
       });
-      _showErrorDialog('Email sudah terdaftar!');
-      return;
+
+    if (newUser != null) {
+        // Tampilkan success dialog
+        _showSuccessDialog();
+      } else {
+        _showErrorDialog('Registrasi gagal. Silakan coba lagi.');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorDialog(e.toString());
     }
-
-    // Generate ID baru (ID terakhir + 1)
-    int newId = users.isEmpty ? 1 : users.last['id'] + 1;
-
-    // Tambah user baru ke UserData
-    Map<String, dynamic> newUser = {
-      'id': newId,
-      'nama': nama,
-      'email': email,
-      'password': password,
-      'alamat': alamat,
-      'imagePath': 'assets/images/profile1.png', // default image
-    };
-
-    users.add(newUser);
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    // Tampilkan success dialog
-    _showSuccessDialog();
   }
 
   // Fungsi untuk show error dialog
@@ -123,9 +126,7 @@ class _RegisterPageState extends State<RegisterPage> {
               Navigator.pop(context); // Close dialog
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginPage(),
-                ),
+                MaterialPageRoute(builder: (context) => const LoginPage()),
               );
             },
             child: const Text('OK'),
