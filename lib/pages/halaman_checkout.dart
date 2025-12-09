@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/main.dart';
 import 'package:tubes_sparehub/data/KeranjangData.dart';
 import 'package:tubes_sparehub/pages/keranjang.dart';
+import 'package:tubes_sparehub/services/xendit_service.dart'; // Sesuaikan path
+import 'package:url_launcher/url_launcher.dart';
 
-// Halaman checkout untuk proses pembayaran
 class CheckoutPage extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
 
@@ -14,7 +15,10 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
-  // Data alamat pengiriman contoh
+  final _emailController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _isProcessing = false;
+
   final List<Map<String, String>> _addresses = [
     {
       'name': 'Bagas',
@@ -29,25 +33,176 @@ class _CheckoutPageState extends State<CheckoutPage> {
     },
   ];
 
-  // Daftar gambar metode pembayaran
   final List<String> _paymentImages = [
     'assets/images/visa.png',
     'assets/images/mastercard.png',
   ];
 
-  // Index alamat dan metode pembayaran yang dipilih
   int _selectedAddressIndex = 0;
   int _selectedPaymentIndex = 1;
 
   @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  // Fungsi untuk proses pembayaran dengan Xendit
+  Future<void> _processPayment() async {
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mohon isi email dengan benar'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final totalPembayaran = getTotalSetelahDiskon();
+      final email = _emailController.text.trim();
+      final selectedAddress = _addresses[_selectedAddressIndex];
+
+      // Panggil Xendit Service
+      final invoiceUrl = await XenditService.createInvoice(
+        amount: totalPembayaran,
+        name: selectedAddress['name']!,
+        email: email,
+      );
+
+      setState(() => _isProcessing = false);
+
+      // Tampilkan dialog sukses
+      if (mounted) {
+        _showPaymentDialog(invoiceUrl);
+      }
+    } catch (e) {
+      setState(() => _isProcessing = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Dialog setelah invoice berhasil dibuat
+  void _showPaymentDialog(String invoiceUrl) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            SizedBox(width: 12),
+            Text('Invoice Berhasil Dibuat!'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Invoice pembayaran telah dibuat dan dikirim ke email Anda.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.qr_code_2, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Anda bisa bayar menggunakan QRIS',
+                      style: TextStyle(fontSize: 13, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Klik tombol di bawah untuk membuka halaman pembayaran:',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MyHomePage(title: 'SpareHub'),
+                ),
+              );
+            },
+            child: const Text('Nanti Saja'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              debugPrint("INVOICE URL = $invoiceUrl");
+
+              try {
+                final uri = Uri.parse(invoiceUrl);
+
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+                keranjang.clear();
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MyHomePage(title: 'SpareHub'),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal membuka link: $e')),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: const Text('Buka Pembayaran'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Hitung total harga dan diskon
     int totalAsli = getTotalHargaAsli();
     int totalSetelahDiskon = getTotalSetelahDiskon();
     int totalDiskon = totalAsli - totalSetelahDiskon;
     int totalPembayaran = totalSetelahDiskon;
 
-    // Struktur utama halaman checkout
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -65,7 +220,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         actions: [
           Stack(
             children: [
-              // Tombol ke halaman keranjang
               IconButton(
                 icon: const Icon(
                   Icons.shopping_cart_outlined,
@@ -84,55 +238,112 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
         ],
       ),
-      // Layout responsif
       body: LayoutBuilder(
         builder: (context, constraints) {
           bool isWide = constraints.maxWidth > 900;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
-            child: isWide
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 3, child: _buildLeftColumn()),
-                      const SizedBox(width: 24),
-                      SizedBox(
-                        width: 340,
-                        child: _buildRightColumn(
+            child: Form(
+              key: _formKey,
+              child: isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: _buildLeftColumn()),
+                        const SizedBox(width: 24),
+                        SizedBox(
+                          width: 340,
+                          child: _buildRightColumn(
+                            totalAsli,
+                            totalDiskon,
+                            totalPembayaran,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLeftColumn(),
+                        const SizedBox(height: 24),
+                        _buildRightColumn(
                           totalAsli,
                           totalDiskon,
                           totalPembayaran,
                         ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLeftColumn(),
-                      const SizedBox(height: 24),
-                      _buildRightColumn(
-                        totalAsli,
-                        totalDiskon,
-                        totalPembayaran,
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+            ),
           );
         },
       ),
     );
   }
 
-  // Kolom kiri: alamat, produk, dan metode pembayaran
   Widget _buildLeftColumn() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Input Email untuk Invoice
+        _sectionTitle("Email untuk Invoice"),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade300,
+                blurRadius: 4,
+                offset: const Offset(1, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.email_outlined, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Invoice akan dikirim ke email ini',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan email Anda',
+                  prefixIcon: const Icon(Icons.mail),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Email tidak boleh kosong';
+                  }
+                  if (!value.contains('@') || !value.contains('.')) {
+                    return 'Email tidak valid';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
         _sectionTitle("Pilih Alamat Pengiriman"),
         const SizedBox(height: 12),
-        // Daftar alamat pengiriman
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -155,7 +366,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         const SizedBox(height: 24),
         _sectionTitle("Detail Produk"),
         const SizedBox(height: 12),
-        // Tampilkan item produk dari keranjang
         Column(
           children: widget.cartItems
               .map(
@@ -169,26 +379,34 @@ class _CheckoutPageState extends State<CheckoutPage> {
         const SizedBox(height: 24),
         _sectionTitle("Metode Pembayaran"),
         const SizedBox(height: 12),
-        // Pilihan metode pembayaran
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (int i = 0; i < _paymentImages.length; i++)
-              _paymentCard(
-                index: i,
-                imagePath: _paymentImages[i],
-                selected: _selectedPaymentIndex == i,
-                onTap: () => setState(() => _selectedPaymentIndex = i),
+        // Info bahwa pembayaran menggunakan Xendit QRIS
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.green.shade200),
+          ),
+          child: Row(
+            children: const [
+              Icon(Icons.qr_code_scanner, color: Colors.green, size: 24),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Pembayaran menggunakan QRIS melalui Xendit',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            _addPaymentCard(),
-          ],
+            ],
+          ),
         ),
       ],
     );
   }
 
-  // Kolom kanan: ringkasan total pembayaran
   Widget _buildRightColumn(
     int totalAsli,
     int totalDiskon,
@@ -220,7 +438,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
             color: Colors.red,
           ),
           const Divider(height: 30),
-          // Total akhir pembayaran
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -238,25 +455,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ],
           ),
           const SizedBox(height: 20),
-          // Tombol bayar sekarang
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                keranjang.clear();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Pembayaran Berhasil!')),
-                );
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const MyHomePage(title: 'SpareHub'),
-                  ),
-                );
-              },
-              label: const Text(
-                "Bayar Sekarang",
-                style: TextStyle(
+              onPressed: _isProcessing ? null : _processPayment,
+              icon: _isProcessing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.payment, color: Colors.white),
+              label: Text(
+                _isProcessing ? "Memproses..." : "Bayar Sekarang",
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -276,7 +491,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // Kartu tampilan produk di checkout
   Widget _itemCard(Map<String, dynamic> product) {
     double hargaAsli = (product['hargaAsli'] ?? 0).toDouble();
     double diskon = (product['diskon'] ?? 0).toDouble();
@@ -299,7 +513,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Gambar produk
           Image.asset(
             product['imagePath'] ?? '',
             width: 90,
@@ -322,7 +535,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
             },
           ),
           const SizedBox(width: 12),
-          // Detail produk
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,7 +582,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // Fungsi format angka ke rupiah
   String formatRupiah(dynamic number) {
     int numInt = (number is double)
         ? number.round()
@@ -390,7 +601,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return 'Rp $result';
   }
 
-  // Hitung total harga asli semua produk
   int getTotalHargaAsli() {
     int total = 0;
     for (var p in widget.cartItems) {
@@ -401,7 +611,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return total;
   }
 
-  // Hitung total harga setelah diskon
   int getTotalSetelahDiskon() {
     int total = 0;
     for (var p in widget.cartItems) {
@@ -413,13 +622,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return total;
   }
 
-  // Judul tiap section (alamat, produk, pembayaran)
   Widget _sectionTitle(String title) => Text(
     title,
     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
   );
 
-  // Baris detail total harga
   Widget _detailRow(String title, String value, {Color? color}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
@@ -434,7 +641,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     ),
   );
 
-  // Kartu alamat pengiriman
   Widget _addressCard({
     required int index,
     required String name,
@@ -495,7 +701,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // Tombol tambah alamat baru
   Widget _addAddressCard() => Container(
     width: 160,
     height: 120,
@@ -508,64 +713,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     child: const Text(
       "+ Tambah Alamat",
       style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-    ),
-  );
-
-  // Kartu metode pembayaran
-  Widget _paymentCard({
-    required int index,
-    required String imagePath,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        width: 100,
-        height: 70,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? Colors.green : Colors.grey.shade300,
-            width: selected ? 2.5 : 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade300,
-              blurRadius: 4,
-              offset: const Offset(1, 2),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Image.asset(
-            imagePath,
-            width: 45,
-            height: 40,
-            fit: BoxFit.contain,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Tombol tambah metode pembayaran
-  Widget _addPaymentCard() => Container(
-    width: 100,
-    height: 70,
-    decoration: BoxDecoration(
-      color: const Color(0xFFF1F3F4),
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Colors.grey.shade300),
-    ),
-    child: const Center(
-      child: Text(
-        "+ Tambah\nMetode",
-        textAlign: TextAlign.center,
-        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
-      ),
     ),
   );
 }
