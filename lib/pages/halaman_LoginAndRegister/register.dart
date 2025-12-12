@@ -161,14 +161,16 @@ class _RegisterPageState extends State<RegisterPage> {
                 Container(
                   width: 100,
                   height: 100,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF122C4F),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.shopping_cart,
-                    size: 60,
-                    color: Colors.white,
+                  child: Image.asset(
+                    'assets/images/logo_baru_(with_border).png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.store,
+                        color: Color(0xFF122C4F),
+                        size: 24,
+                      );
+                    },
                   ),
                 ),
 
