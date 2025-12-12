@@ -4,8 +4,12 @@ import 'package:tubes_sparehub/data/KeranjangData.dart'; // Import data keranjan
 import 'package:tubes_sparehub/pages/keranjang.dart';
 import 'package:tubes_sparehub/services/toko_service.dart';
 import 'package:tubes_sparehub/services/rating_service.dart';
+import 'package:tubes_sparehub/services/product_service.dart';
 import 'package:tubes_sparehub/models/toko_model.dart';
 import 'package:tubes_sparehub/models/rating_model.dart';
+import 'package:tubes_sparehub/models/product_model.dart';
+import 'package:tubes_sparehub/widgets/review_dialog.dart';
+import 'package:tubes_sparehub/widgets/product_recommendations.dart';
 
 // Halaman Detail Produk - Menampilkan informasi lengkap produk
 class DetailProduk extends StatefulWidget {
@@ -21,6 +25,8 @@ class DetailProduk extends StatefulWidget {
 class _DetailProdukState extends State<DetailProduk> {
   final TokoService _tokoService = TokoService();
   final RatingService _ratingService = RatingService();
+  final ProductService _productService = ProductService();
+
   // Variable untuk menyimpan jumlah total item di keranjang
   int cartItemCount = 0;
 
@@ -30,6 +36,15 @@ class _DetailProdukState extends State<DetailProduk> {
   // Fungsi untuk fetch data toko dari Firestore
   Future<TokoModel?> getTokoById(String tokoId) async {
     return await _tokoService.getTokoById(tokoId);
+  }
+
+  // Fungsi untuk show review dialog
+  void _showReviewDialog() {
+    showDialog(
+      context: context,
+      builder: (context) =>
+          ReviewDialog(produkId: widget.product['id'].toString()),
+    );
   }
 
   // Fungsi untuk menambahkan produk ke keranjang
@@ -455,6 +470,52 @@ class _DetailProdukState extends State<DetailProduk> {
 
                           const SizedBox(height: 16),
 
+                          // STOK REAL-TIME
+                          StreamBuilder<ProductModel?>(
+                            stream: _productService
+                                .getProductById(widget.product['id'].toString())
+                                .asStream(),
+                            builder: (context, stockSnapshot) {
+                              int stok = widget.product['stok'] ?? 0;
+                              if (stockSnapshot.hasData &&
+                                  stockSnapshot.data != null) {
+                                stok = stockSnapshot.data!.stok;
+                              }
+
+                              Color stokColor = stok > 10
+                                  ? Colors.green
+                                  : (stok > 0 ? Colors.orange : Colors.red);
+                              String stokText = stok > 10
+                                  ? 'Stok Tersedia'
+                                  : (stok > 0 ? 'Stok Terbatas' : 'Stok Habis');
+
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.inventory_2,
+                                      color: stokColor,
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      '$stokText ($stok unit)',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: stokColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+
                           // RATING (Rata-rata)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -490,17 +551,33 @@ class _DetailProdukState extends State<DetailProduk> {
                           const SizedBox(height: 16),
 
                           // ULASAN PENGGUNA
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'Ulasan Pengguna',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF122C4F),
-                              ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Ulasan Pengguna',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF122C4F),
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _showReviewDialog,
+                                  icon: const Icon(Icons.rate_review, size: 18),
+                                  label: const Text('Tulis Review'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Color(0xFF122C4F),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+
+                          const SizedBox(height: 8),
+
                           // List semua ulasan dari Firestore
                           ratingProduk.isEmpty
                               ? const Padding(
@@ -655,6 +732,14 @@ class _DetailProdukState extends State<DetailProduk> {
                                 ),
                               ),
                             ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // REKOMENDASI PRODUK SERUPA
+                          ProductRecommendations(
+                            currentProductId: widget.product['id'].toString(),
+                            kategori: widget.product['kategori']?.toString(),
                           ),
                         ],
                       ),
