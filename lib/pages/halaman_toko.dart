@@ -51,7 +51,7 @@ class _tokoSayaState extends State<toko_saya> {
         deskripsi: 'Deskripsi produk',
         imagePath: 'assets/images/default_icon.png',
         tokoId: tokoId,
-        stok: 10,
+        stok: jumlah,
         kategori: 'Otomotif',
       );
 

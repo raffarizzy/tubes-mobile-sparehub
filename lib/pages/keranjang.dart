@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_sparehub/data/KeranjangData.dart';
-import 'package:tubes_sparehub/data/ProductData.dart';
+import 'package:tubes_sparehub/services/keranjang_service.dart';
+import 'package:tubes_sparehub/services/product_service.dart';
+import 'package:tubes_sparehub/services/auth_service.dart';
+import 'package:tubes_sparehub/models/keranjang_model.dart';
+import 'package:tubes_sparehub/models/product_model.dart';
 import 'package:tubes_sparehub/pages/halaman_checkout.dart';
 
 void main() {
@@ -37,35 +40,29 @@ class _KeranjangPageState extends State<KeranjangPage> {
   final Color accentColor = const Color(0xFFE4A70D);
   final Color lightBackgroundColor = const Color(0xFFF4F6F9);
 
+  final KeranjangService _keranjangService = KeranjangService();
+  final ProductService _productService = ProductService();
+  final AuthService _authService = AuthService();
+
   // Format harga ke bentuk rupiah
   String _formatRupiah(int number) {
     int integerPart = number.toInt();
     String result = integerPart.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
-    );
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
     return result;
   }
 
-  // Dapatkan produk berdasarkan ID
-  Map<String, dynamic>? getProductById(int id) {
-    try {
-      return products.firstWhere((produk) => produk['id'] == id);
-    } catch (e) {
-      return null;
-    }
-  }
-
   // Hitung total harga keranjang
-  int _calculateTotalPrice() {
+  int _calculateTotalPrice(
+      List<KeranjangModel> keranjangItems, Map<String, ProductModel> productsMap) {
     int total = 0;
 
-    for (var item in keranjang) {
-      var produk = getProductById(item['produkId']);
+    for (var item in keranjangItems) {
+      final produk = productsMap[item.produkId];
       if (produk != null) {
-        int harga = produk['harga'];
-        int jumlah = item['jumlah'];
-        total += harga * jumlah;
+        total += produk.harga * item.jumlah;
       }
     }
 
@@ -73,48 +70,86 @@ class _KeranjangPageState extends State<KeranjangPage> {
   }
 
   // Tambah jumlah item di keranjang
-  void _incrementQuantity(int index) {
-    setState(() {
-      keranjang[index]['jumlah']++;
-    });
+  Future<void> _incrementQuantity(KeranjangModel item) async {
+    try {
+      await _keranjangService.updateKeranjang(
+        item.id,
+        {'jumlah': item.jumlah + 1},
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengupdate jumlah: $e')),
+      );
+    }
   }
 
   // Kurangi jumlah item di keranjang
-  void _decrementQuantity(int index) {
-    setState(() {
-      if (keranjang[index]['jumlah'] > 1) {
-        keranjang[index]['jumlah']--;
-      } else {
-        final produk = getProductById(keranjang[index]['produkId']);
-        keranjang.removeAt(index);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${produk?['nama']} dihapus dari keranjang.'),
-            duration: const Duration(seconds: 1),
-          ),
+  Future<void> _decrementQuantity(KeranjangModel item) async {
+    try {
+      if (item.jumlah > 1) {
+        await _keranjangService.updateKeranjang(
+          item.id,
+          {'jumlah': item.jumlah - 1},
         );
+      } else {
+        await _removeItem(item);
       }
-    });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengupdate jumlah: $e')),
+      );
+    }
   }
 
   // Hapus item
-  void _removeItem(int index) {
-    setState(() {
-      if (index >= 0 && index < keranjang.length) {
-        final produk = getProductById(keranjang[index]['produkId']);
-        keranjang.removeAt(index);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${produk?['nama']} dihapus dari keranjang.'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    });
+  Future<void> _removeItem(KeranjangModel item) async {
+    try {
+      await _keranjangService.deleteKeranjang(item.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item dihapus dari keranjang'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menghapus item: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = _authService.currentUser;
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: lightBackgroundColor,
+        appBar: AppBar(
+          title: const Text(
+            'Keranjang SpareHub',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: primaryColor,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.login, size: 80, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                'Silakan login terlebih dahulu',
+                style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: lightBackgroundColor,
       appBar: AppBar(
@@ -127,22 +162,72 @@ class _KeranjangPageState extends State<KeranjangPage> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: keranjang.isEmpty
-            ? _buildEmptyCart()
-            : Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: keranjang.length,
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      itemBuilder: (context, index) {
-                        return _buildCartItemCard(index);
-                      },
+        child: StreamBuilder<List<KeranjangModel>>(
+          stream: _keranjangService.getKeranjangByUserId(user.uid),
+          builder: (context, keranjangSnapshot) {
+            // Loading state
+            if (keranjangSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            // Error state
+            if (keranjangSnapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error: ${keranjangSnapshot.error}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              );
+            }
+
+            final keranjangItems = keranjangSnapshot.data ?? [];
+
+            // Empty cart
+            if (keranjangItems.isEmpty) {
+              return _buildEmptyCart();
+            }
+
+            // Fetch all product details
+            return StreamBuilder<List<ProductModel>>(
+              stream: _productService.getAllProducts(),
+              builder: (context, productSnapshot) {
+                if (productSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final allProducts = productSnapshot.data ?? [];
+
+                // Create a map for quick lookup
+                Map<String, ProductModel> productsMap = {};
+                for (var product in allProducts) {
+                  productsMap[product.id] = product;
+                }
+
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: keranjangItems.length,
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        itemBuilder: (context, index) {
+                          final keranjangItem = keranjangItems[index];
+                          final produk = productsMap[keranjangItem.produkId];
+
+                          if (produk == null) {
+                            return const SizedBox();
+                          }
+
+                          return _buildCartItemCard(keranjangItem, produk);
+                        },
+                      ),
                     ),
-                  ),
-                  _buildCheckoutFooter(),
-                ],
-              ),
+                    _buildCheckoutFooter(keranjangItems, productsMap),
+                  ],
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -169,16 +254,11 @@ class _KeranjangPageState extends State<KeranjangPage> {
   }
 
   // Kartu item di keranjang
-  Widget _buildCartItemCard(int index) {
-    final item = keranjang[index];
-    final produk = getProductById(item['produkId']);
-
-    if (produk == null) return const SizedBox();
-
+  Widget _buildCartItemCard(KeranjangModel item, ProductModel produk) {
     return Dismissible(
-      key: ValueKey(produk['id']),
+      key: ValueKey(item.id),
       direction: DismissDirection.endToStart,
-      onDismissed: (_) => _removeItem(index),
+      onDismissed: (_) => _removeItem(item),
       background: Container(
         decoration: BoxDecoration(
           color: Colors.red.shade700,
@@ -205,22 +285,22 @@ class _KeranjangPageState extends State<KeranjangPage> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
                 child: Image.asset(
-                  produk['imagePath'],
+                  produk.imagePath,
                   width: 75,
                   height: 75,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
+                      width: 75,
+                      height: 75,
                       decoration: BoxDecoration(
                         color: Colors.grey[400],
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.motorcycle,
-                          size: 75,
-                          color: Colors.white70,
-                        ),
+                      child: const Icon(
+                        Icons.motorcycle,
+                        size: 40,
+                        color: Colors.white70,
                       ),
                     );
                   },
@@ -236,7 +316,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
                       children: [
                         Flexible(
                           child: Text(
-                            produk['nama'],
+                            produk.nama,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -247,7 +327,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
                           ),
                         ),
                         Text(
-                          'Rp ${_formatRupiah(produk['harga'] * item['jumlah'])}',
+                          'Rp ${_formatRupiah(produk.harga * item.jumlah)}',
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 15,
@@ -258,7 +338,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Rp ${_formatRupiah(produk['harga'])}',
+                      'Rp ${_formatRupiah(produk.harga)}',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontSize: 14,
@@ -280,12 +360,12 @@ class _KeranjangPageState extends State<KeranjangPage> {
                         children: [
                           _buildQuantityButton(
                             icon: Icons.remove,
-                            onPressed: () => _decrementQuantity(index),
+                            onPressed: () => _decrementQuantity(item),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                             child: Text(
-                              '${item['jumlah']}',
+                              '${item.jumlah}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -294,7 +374,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
                           ),
                           _buildQuantityButton(
                             icon: Icons.add,
-                            onPressed: () => _incrementQuantity(index),
+                            onPressed: () => _incrementQuantity(item),
                           ),
                         ],
                       ),
@@ -323,7 +403,8 @@ class _KeranjangPageState extends State<KeranjangPage> {
     );
   }
 
-  Widget _buildCheckoutFooter() {
+  Widget _buildCheckoutFooter(
+      List<KeranjangModel> keranjangItems, Map<String, ProductModel> productsMap) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
@@ -348,7 +429,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
                 style: TextStyle(fontSize: 18, color: Colors.black54),
               ),
               Text(
-                'Rp ${_formatRupiah(_calculateTotalPrice())}',
+                'Rp ${_formatRupiah(_calculateTotalPrice(keranjangItems, productsMap))}',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -363,7 +444,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
             child: ElevatedButton(
               onPressed: () {
                 // Validasi keranjang kosong
-                if (keranjang.isEmpty) {
+                if (keranjangItems.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Keranjang masih kosong!')),
                   );
@@ -373,20 +454,20 @@ class _KeranjangPageState extends State<KeranjangPage> {
                 // Konversi isi keranjang ke format untuk CheckoutPage
                 List<Map<String, dynamic>> cartItems = [];
 
-                for (var item in keranjang) {
-                  final produk = getProductById(item['produkId']);
+                for (var item in keranjangItems) {
+                  final produk = productsMap[item.produkId];
 
                   // Skip jika produk tidak ditemukan
                   if (produk == null) continue;
 
                   // Tambah ke cartItems dengan format yang benar
                   cartItems.add({
-                    'id': produk['id'],
-                    'nama': produk['nama'],
-                    'imagePath': produk['imagePath'],
-                    'hargaAsli': produk['harga'], // Harga asli
-                    'diskon': produk['diskon'] ?? 0.0, // Diskon (default 0)
-                    'jumlah': item['jumlah'], // Jumlah yang dibeli
+                    'id': produk.id,
+                    'nama': produk.nama,
+                    'imagePath': produk.imagePath,
+                    'hargaAsli': produk.harga, // Harga asli
+                    'diskon': produk.diskon ?? 0.0, // Diskon (default 0)
+                    'jumlah': item.jumlah, // Jumlah yang dibeli
                   });
                 }
 

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/pages/halaman_checkout.dart';
-import 'package:tubes_sparehub/data/KeranjangData.dart'; // Import data keranjang
 import 'package:tubes_sparehub/pages/keranjang.dart';
 import 'package:tubes_sparehub/services/toko_service.dart';
 import 'package:tubes_sparehub/services/rating_service.dart';
 import 'package:tubes_sparehub/services/product_service.dart';
+import 'package:tubes_sparehub/services/keranjang_service.dart';
+import 'package:tubes_sparehub/services/auth_service.dart';
 import 'package:tubes_sparehub/models/toko_model.dart';
 import 'package:tubes_sparehub/models/rating_model.dart';
 import 'package:tubes_sparehub/models/product_model.dart';
+import 'package:tubes_sparehub/models/keranjang_model.dart';
 import 'package:tubes_sparehub/widgets/review_dialog.dart';
 import 'package:tubes_sparehub/widgets/product_recommendations.dart';
 
@@ -26,12 +28,31 @@ class _DetailProdukState extends State<DetailProduk> {
   final TokoService _tokoService = TokoService();
   final RatingService _ratingService = RatingService();
   final ProductService _productService = ProductService();
+  final KeranjangService _keranjangService = KeranjangService();
+  final AuthService _authService = AuthService();
 
   // Variable untuk menyimpan jumlah total item di keranjang
   int cartItemCount = 0;
 
   // Variable untuk menyimpan jumlah quantity produk yang akan dibeli
   int quantity = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCartItemCount();
+  }
+
+  // Load cart item count
+  Future<void> _loadCartItemCount() async {
+    final user = _authService.currentUser;
+    if (user != null) {
+      final count = await _keranjangService.getKeranjangItemCount(user.uid);
+      setState(() {
+        cartItemCount = count;
+      });
+    }
+  }
 
   // Fungsi untuk fetch data toko dari Firestore
   Future<TokoModel?> getTokoById(String tokoId) async {
@@ -42,33 +63,69 @@ class _DetailProdukState extends State<DetailProduk> {
   void _showReviewDialog() {
     showDialog(
       context: context,
-      builder: (context) =>
-          ReviewDialog(produkId: widget.product['id'].toString()),
+      builder: (context) => ReviewDialog(
+        produkId: widget.product['id'].toString(),
+      ),
     );
   }
 
-  // Fungsi untuk menambahkan produk ke keranjang
-  // Cek apakah produk sudah ada, jika ya tambah quantity, jika tidak tambah item baru
-  void tambahKeKeranjang(int userId, int produkId, int jumlahTambahan) {
-    // Cari apakah produk sudah ada di keranjang untuk user ini
-    int indexProduk = keranjang.indexWhere(
-      (item) => item['userId'] == userId && item['produkId'] == produkId,
-    );
+  // Fungsi untuk menambahkan produk ke keranjang dengan Firestore
+  Future<void> tambahKeKeranjang(String produkId, int jumlahTambahan) async {
+    try {
+      final user = _authService.currentUser;
 
-    if (indexProduk != -1) {
-      // Produk sudah ada di keranjang, tambah quantity-nya
-      setState(() {
-        keranjang[indexProduk]['jumlah'] += jumlahTambahan;
-      });
-    } else {
-      // Produk belum ada di keranjang, tambah item baru
-      setState(() {
-        keranjang.add({
-          'userId': userId,
-          'produkId': produkId,
-          'jumlah': jumlahTambahan,
-        });
-      });
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Silakan login terlebih dahulu')),
+        );
+        return;
+      }
+
+      // Create keranjang model
+      KeranjangModel keranjangItem = KeranjangModel(
+        id: '', // Will be auto-generated
+        userId: user.uid,
+        produkId: produkId,
+        jumlah: jumlahTambahan,
+      );
+
+      // Add to Firestore
+      await _keranjangService.addToKeranjang(keranjangItem);
+
+      // Reload cart count
+      await _loadCartItemCount();
+
+      // Tampilkan SnackBar notifikasi
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$jumlahTambahan produk berhasil ditambahkan ke keranjang!',
+            ),
+            duration: const Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'Lihat',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const KeranjangPage(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menambahkan ke keranjang: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -160,9 +217,7 @@ class _DetailProdukState extends State<DetailProduk> {
           final toko = tokoSnapshot.data;
 
           return StreamBuilder<List<RatingModel>>(
-            stream: _ratingService.getRatingsByProductId(
-              widget.product['id'].toString(),
-            ),
+            stream: _ratingService.getRatingsByProductId(widget.product['id'].toString()),
             builder: (context, ratingSnapshot) {
               // Calculate average rating
               double avgRating = 0.0;
@@ -170,9 +225,7 @@ class _DetailProdukState extends State<DetailProduk> {
 
               if (ratingSnapshot.hasData && ratingSnapshot.data!.isNotEmpty) {
                 ratingProduk = ratingSnapshot.data!;
-                avgRating =
-                    ratingProduk.fold(0.0, (sum, r) => sum + r.rating) /
-                    ratingProduk.length;
+                avgRating = ratingProduk.fold(0.0, (sum, r) => sum + r.rating) / ratingProduk.length;
               }
 
               return SingleChildScrollView(
@@ -188,203 +241,203 @@ class _DetailProdukState extends State<DetailProduk> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // GAMBAR PRODUK
-                          Center(
-                            child: Container(
-                              height: 200,
-                              padding: const EdgeInsets.all(20),
-                              child: Image.asset(
-                                // Ambil path gambar dari data produk
-                                widget.product['imagePath'] ??
-                                    'assets/images/oliMobil.png',
-                                fit: BoxFit.contain,
+                  // GAMBAR PRODUK
+                  Center(
+                    child: Container(
+                      height: 200,
+                      padding: const EdgeInsets.all(20),
+                      child: Image.asset(
+                        // Ambil path gambar dari data produk
+                        widget.product['imagePath'] ??
+                            'assets/images/oliMobil.png',
+                        fit: BoxFit.contain,
 
-                                // Error handler jika gambar tidak ditemukan
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[400],
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.motorcycle,
-                                        size: 120,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  );
-                                },
+                        // Error handler jika gambar tidak ditemukan
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[400],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.motorcycle,
+                                size: 120,
+                                color: Colors.white70,
                               ),
                             ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // NAMA PRODUK
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      // Ambil nama produk dari data
+                      widget.product['nama'] ?? 'Nama Produk',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF122C4F),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // HARGA PRODUK
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: RichText(
+                      text: TextSpan(
+                        children: [
+                          // Harga produk
+                          TextSpan(
+                            text: 'Rp ${widget.product['harga'] ?? 0}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF122C4F),
+                            ),
                           ),
+                          // Satuan
+                          const TextSpan(
+                            text: ' / pcs',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF7F8C8D),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
-                          const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                          // NAMA PRODUK
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              // Ambil nama produk dari data
-                              widget.product['nama'] ?? 'Nama Produk',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                  // QUANTITY SELECTOR (Tambah/Kurang)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            // Label "Jumlah:"
+                            const Text(
+                              'Jumlah:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                                 color: Color(0xFF122C4F),
                               ),
                             ),
-                          ),
+                            const SizedBox(width: 12),
 
-                          const SizedBox(height: 12),
-
-                          // HARGA PRODUK
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: RichText(
-                              text: TextSpan(
-                                children: [
-                                  // Harga produk
-                                  TextSpan(
-                                    text: 'Rp ${widget.product['harga'] ?? 0}',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF122C4F),
-                                    ),
-                                  ),
-                                  // Satuan
-                                  const TextSpan(
-                                    text: ' / pcs',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF7F8C8D),
-                                    ),
-                                  ),
-                                ],
+                            // Tombol Kurang (-)
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Color(0xFF122C4F),
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.remove,
+                                  color: Color(0xFF122C4F),
+                                ),
+                                iconSize: 16,
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                onPressed: () {
+                                  // Kurangi quantity, minimal 1
+                                  if (quantity > 1) {
+                                    setState(() {
+                                      quantity--;
+                                    });
+                                  }
+                                },
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(width: 10),
 
-                          // QUANTITY SELECTOR (Tambah/Kurang)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    // Label "Jumlah:"
-                                    const Text(
-                                      'Jumlah:',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF122C4F),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-
-                                    // Tombol Kurang (-)
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: Color(0xFF122C4F),
-                                          width: 1.5,
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: IconButton(
-                                        icon: const Icon(
-                                          Icons.remove,
-                                          color: Color(0xFF122C4F),
-                                        ),
-                                        iconSize: 16,
-                                        padding: const EdgeInsets.all(4),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 32,
-                                          minHeight: 32,
-                                        ),
-                                        onPressed: () {
-                                          // Kurangi quantity, minimal 1
-                                          if (quantity > 1) {
-                                            setState(() {
-                                              quantity--;
-                                            });
-                                          }
-                                        },
-                                      ),
-                                    ),
-
-                                    const SizedBox(width: 10),
-
-                                    // Display jumlah quantity
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF2F5FF),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '$quantity',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF122C4F),
-                                        ),
-                                      ),
-                                    ),
-
-                                    const SizedBox(width: 10),
-
-                                    // Tombol Tambah (+)
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF122C4F),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: IconButton(
-                                        icon: const Icon(
-                                          Icons.add,
-                                          color: Colors.white,
-                                        ),
-                                        iconSize: 16,
-                                        padding: const EdgeInsets.all(4),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 32,
-                                          minHeight: 32,
-                                        ),
-                                        onPressed: () {
-                                          // Tambah quantity
-                                          setState(() {
-                                            quantity++;
-                                          });
-                                        },
-                                      ),
-                                    ),
-                                  ],
+                            // Display jumlah quantity
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF2F5FF),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '$quantity',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF122C4F),
                                 ),
-
-                                const SizedBox(height: 12),
-
-                                // Total harga (harga x quantity)
-                                Text(
-                                  'Total: Rp ${(widget.product['harga'] ?? 0) * quantity}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF122C4F),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(width: 10),
+
+                            // Tombol Tambah (+)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF122C4F),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                ),
+                                iconSize: 16,
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                onPressed: () {
+                                  // Tambah quantity
+                                  setState(() {
+                                    quantity++;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Total harga (harga x quantity)
+                        Text(
+                          'Total: Rp ${(widget.product['harga'] ?? 0) * quantity}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF122C4F),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
 
                           // INFO TOKO
                           Padding(
@@ -413,8 +466,7 @@ class _DetailProdukState extends State<DetailProduk> {
                                   children: [
                                     // Nama toko dari Firestore
                                     Text(
-                                      toko?.namaToko ??
-                                          'Nama Toko Tidak Ditemukan',
+                                      toko?.namaToko ?? 'Nama Toko Tidak Ditemukan',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -435,86 +487,72 @@ class _DetailProdukState extends State<DetailProduk> {
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                          // DESKRIPSI PRODUK
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'Deskripsi',
+                  // DESKRIPSI PRODUK
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Deskripsi',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF122C4F),
+                      ),
+                    ),
+                  ),
+
+                  // Isi deskripsi
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      // Ambil deskripsi dari data produk
+                      widget.product['deskripsi'] ?? 'Tidak ada deskripsi',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // STOK REAL-TIME
+                  StreamBuilder<ProductModel?>(
+                    stream: _productService.getProductById(widget.product['id'].toString()).asStream(),
+                    builder: (context, stockSnapshot) {
+                      int stok = widget.product['stok'] ?? 0;
+                      if (stockSnapshot.hasData && stockSnapshot.data != null) {
+                        stok = stockSnapshot.data!.stok;
+                      }
+
+                      Color stokColor = stok > 10 ? Colors.green : (stok > 0 ? Colors.orange : Colors.red);
+                      String stokText = stok > 10 ? 'Stok Tersedia' : (stok > 0 ? 'Stok Terbatas' : 'Stok Habis');
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.inventory_2, color: stokColor, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              '$stokText ($stok unit)',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF122C4F),
+                                fontWeight: FontWeight.w600,
+                                color: stokColor,
                               ),
                             ),
-                          ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
 
-                          // Isi deskripsi
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            child: Text(
-                              // Ambil deskripsi dari data produk
-                              widget.product['deskripsi'] ??
-                                  'Tidak ada deskripsi',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // STOK REAL-TIME
-                          StreamBuilder<ProductModel?>(
-                            stream: _productService
-                                .getProductById(widget.product['id'].toString())
-                                .asStream(),
-                            builder: (context, stockSnapshot) {
-                              int stok = widget.product['stok'] ?? 0;
-                              if (stockSnapshot.hasData &&
-                                  stockSnapshot.data != null) {
-                                stok = stockSnapshot.data!.stok;
-                              }
-
-                              Color stokColor = stok > 10
-                                  ? Colors.green
-                                  : (stok > 0 ? Colors.orange : Colors.red);
-                              String stokText = stok > 10
-                                  ? 'Stok Tersedia'
-                                  : (stok > 0 ? 'Stok Terbatas' : 'Stok Habis');
-
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.inventory_2,
-                                      color: stokColor,
-                                      size: 20,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      '$stokText ($stok unit)',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: stokColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-
-                          const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
                           // RATING (Rata-rata)
                           Padding(
@@ -522,11 +560,7 @@ class _DetailProdukState extends State<DetailProduk> {
                             child: Row(
                               children: [
                                 // Icon bintang
-                                Icon(
-                                  Icons.star,
-                                  color: Colors.amber[700],
-                                  size: 24,
-                                ),
+                                Icon(Icons.star, color: Colors.amber[700], size: 24),
                                 const SizedBox(width: 8),
 
                                 // Rata-rata rating
@@ -591,10 +625,8 @@ class _DetailProdukState extends State<DetailProduk> {
                                   ),
                                 )
                               : ListView.builder(
-                                  shrinkWrap:
-                                      true, // Agar ListView tidak scroll sendiri
-                                  physics:
-                                      const NeverScrollableScrollPhysics(), // Disable scroll
+                                  shrinkWrap: true, // Agar ListView tidak scroll sendiri
+                                  physics: const NeverScrollableScrollPhysics(), // Disable scroll
                                   itemCount: ratingProduk.length,
                                   itemBuilder: (context, index) {
                                     final rating = ratingProduk[index];
@@ -620,64 +652,43 @@ class _DetailProdukState extends State<DetailProduk> {
                                   },
                                 ),
 
-                          const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                          // TOMBOL TAMBAH KE KERANJANG
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: SizedBox(
-                              width: double.infinity, // Full width
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  // Panggil fungsi tambahKeKeranjang
-                                  // userId = 1 (hardcode, bisa diganti dengan userId yang login)
-                                  // produkId = ID produk ini
-                                  // quantity = jumlah yang mau ditambahkan
-                                  tambahKeKeranjang(
-                                    1, // userId (ganti dengan user yang login nanti)
-                                    widget.product['id'],
-                                    quantity,
-                                  );
-
-                                  // Tambah quantity ke cart counter
-                                  setState(() {
-                                    cartItemCount += quantity;
-                                  });
-
-                                  // Tampilkan SnackBar notifikasi
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        '$quantity produk ditambahkan ke keranjang! (Total: $cartItemCount item)',
-                                      ),
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF122C4F),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.shopping_cart,
-                                  color: Colors.white,
-                                ),
-                                label: const Text(
-                                  'Tambah ke Keranjang',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
+                  // TOMBOL TAMBAH KE KERANJANG
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity, // Full width
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          // Panggil fungsi tambahKeKeranjang dengan Firestore
+                          await tambahKeKeranjang(
+                            widget.product['id'].toString(),
+                            quantity,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF122C4F),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                        ),
+                        icon: const Icon(
+                          Icons.shopping_cart,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          'Tambah ke Keranjang',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
 
                           // TOMBOL BELI SEKARANG
                           Padding(
@@ -701,11 +712,9 @@ class _DetailProdukState extends State<DetailProduk> {
                                             'hargaAsli':
                                                 widget.product['hargaAsli'] ??
                                                 widget.product['harga'],
-                                            'diskon':
-                                                widget.product['diskon'] ?? 0,
+                                            'diskon': widget.product['diskon'] ?? 0,
                                             'jumlah': quantity,
-                                            'imagePath':
-                                                widget.product['imagePath'],
+                                            'imagePath': widget.product['imagePath'],
                                           },
                                         ],
                                       ),
@@ -713,11 +722,8 @@ class _DetailProdukState extends State<DetailProduk> {
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      Colors.green, // Hijau biar beda
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
+                                  backgroundColor: Colors.green, // Hijau biar beda
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
