@@ -27,17 +27,19 @@ class _HomePageState extends State<HomePage> {
   List<ProductModel> _filterProducts(List<ProductModel> products) {
     return products.where((product) {
       // Filter by search query
-      bool matchesSearch = searchQuery.isEmpty ||
+      bool matchesSearch =
+          searchQuery.isEmpty ||
           product.nama.toLowerCase().contains(searchQuery.toLowerCase());
 
       // Filter by kategori
-      bool matchesKategori = selectedKategori == null ||
+      bool matchesKategori =
+          selectedKategori == null ||
           selectedKategori == "Semua" ||
           product.kategori == selectedKategori;
 
       // Filter by price range
       bool matchesPrice = true;
-      if (minHarga != null && product.harga <= minHarga!) {
+      if (minHarga != null && product.harga < minHarga!) {
         matchesPrice = false;
       }
       if (maxHarga != null && product.harga > maxHarga!) {
@@ -114,7 +116,10 @@ class _HomePageState extends State<HomePage> {
                     //   ],
                     // ),
                     SizedBox(height: 16),
-                    Text('Range Harga', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Range Harga',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     SizedBox(height: 8),
                     Row(
                       children: [
@@ -197,10 +202,7 @@ class _HomePageState extends State<HomePage> {
           // TAMBAHAN ACTIONS UNTUK TOMBOL KERANJANG
           actions: [
             IconButton(
-              icon: const Icon(
-                Icons.shopping_cart,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.shopping_cart, color: Colors.white),
               onPressed: () {
                 // Navigate ke halaman keranjang
                 Navigator.push(
@@ -226,14 +228,20 @@ class _HomePageState extends State<HomePage> {
                       controller: _searchController,
                       decoration: InputDecoration(
                         hintText: 'Cari sparepart...',
-                        prefixIcon: Icon(Icons.search, color: Color(0xFF122C4F)),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Color(0xFF122C4F),
+                        ),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -260,7 +268,9 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
 
               // Active Filters Display
-              if (selectedKategori != null || minHarga != null || maxHarga != null)
+              if (selectedKategori != null ||
+                  minHarga != null ||
+                  maxHarga != null)
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
@@ -269,12 +279,19 @@ class _HomePageState extends State<HomePage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.filter_alt, size: 16, color: Color(0xFF122C4F)),
+                      Icon(
+                        Icons.filter_alt,
+                        size: 16,
+                        color: Color(0xFF122C4F),
+                      ),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Filter: ${selectedKategori ?? ""} ${minHarga != null ? "Min: Rp $minHarga" : ""} ${maxHarga != null ? "Max: Rp $maxHarga" : ""}',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF122C4F)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF122C4F),
+                          ),
                         ),
                       ),
                       GestureDetector(
@@ -290,7 +307,9 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-              if (selectedKategori != null || minHarga != null || maxHarga != null)
+              if (selectedKategori != null ||
+                  minHarga != null ||
+                  maxHarga != null)
                 const SizedBox(height: 8),
 
               const Text(
@@ -308,9 +327,7 @@ class _HomePageState extends State<HomePage> {
                   builder: (context, snapshot) {
                     // Loading state
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
+                      return const Center(child: CircularProgressIndicator());
                     }
 
                     // Error state
@@ -396,12 +413,13 @@ class _HomePageState extends State<HomePage> {
                     }
 
                     return GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, // 2 kolom
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 0.7, // biar proporsi kayak contoh
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2, // 2 kolom
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 0.7, // biar proporsi kayak contoh
+                          ),
                       itemCount: products.length,
                       itemBuilder: (context, index) {
                         final product = products[index];
@@ -487,7 +505,9 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.yellow[700],
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: const Row(
                                           children: [
