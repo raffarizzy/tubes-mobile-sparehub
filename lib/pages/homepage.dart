@@ -16,6 +16,172 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ProductService _productService = ProductService();
+  final TextEditingController _searchController = TextEditingController();
+
+  String searchQuery = "";
+  String? selectedKategori;
+  double? minHarga;
+  double? maxHarga;
+  bool showFilters = false;
+
+  List<ProductModel> _filterProducts(List<ProductModel> products) {
+    return products.where((product) {
+      // Filter by search query
+      bool matchesSearch = searchQuery.isEmpty ||
+          product.nama.toLowerCase().contains(searchQuery.toLowerCase());
+
+      // Filter by kategori
+      bool matchesKategori = selectedKategori == null ||
+          selectedKategori == "Semua" ||
+          product.kategori == selectedKategori;
+
+      // Filter by price range
+      bool matchesPrice = true;
+      if (minHarga != null && product.harga <= minHarga!) {
+        matchesPrice = false;
+      }
+      if (maxHarga != null && product.harga > maxHarga!) {
+        matchesPrice = false;
+      }
+
+      return matchesSearch && matchesKategori && matchesPrice;
+    }).toList();
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Filter Produk'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Text('Kategori', style: TextStyle(fontWeight: FontWeight.bold)),
+                    // SizedBox(height: 8),
+                    // Wrap(
+                    //   spacing: 8,
+                    //   children: [
+                    //     FilterChip(
+                    //       label: Text('Semua'),
+                    //       selected: selectedKategori == null || selectedKategori == "Semua",
+                    //       onSelected: (selected) {
+                    //         setDialogState(() {
+                    //           selectedKategori = "Semua";
+                    //         });
+                    //       },
+                    //     ),
+                    //     FilterChip(
+                    //       label: Text('Oli'),
+                    //       selected: selectedKategori == "Oli",
+                    //       onSelected: (selected) {
+                    //         setDialogState(() {
+                    //           selectedKategori = selected ? "Oli" : null;
+                    //         });
+                    //       },
+                    //     ),
+                    //     FilterChip(
+                    //       label: Text('Ban'),
+                    //       selected: selectedKategori == "Ban",
+                    //       onSelected: (selected) {
+                    //         setDialogState(() {
+                    //           selectedKategori = selected ? "Ban" : null;
+                    //         });
+                    //       },
+                    //     ),
+                    //     FilterChip(
+                    //       label: Text('Aki'),
+                    //       selected: selectedKategori == "Aki",
+                    //       onSelected: (selected) {
+                    //         setDialogState(() {
+                    //           selectedKategori = selected ? "Aki" : null;
+                    //         });
+                    //       },
+                    //     ),
+                    //     FilterChip(
+                    //       label: Text('Otomotif'),
+                    //       selected: selectedKategori == "Otomotif",
+                    //       onSelected: (selected) {
+                    //         setDialogState(() {
+                    //           selectedKategori = selected ? "Otomotif" : null;
+                    //         });
+                    //       },
+                    //     ),
+                    //   ],
+                    // ),
+                    SizedBox(height: 16),
+                    Text('Range Harga', style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Min',
+                              border: OutlineInputBorder(),
+                              prefixText: 'Rp ',
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                minHarga = double.tryParse(value);
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text('-'),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Max',
+                              border: OutlineInputBorder(),
+                              prefixText: 'Rp ',
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                maxHarga = double.tryParse(value);
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      selectedKategori = null;
+                      minHarga = null;
+                      maxHarga = null;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Text('Reset'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {});
+                    Navigator.pop(context);
+                  },
+                  child: Text('Terapkan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +197,10 @@ class _HomePageState extends State<HomePage> {
           // TAMBAHAN ACTIONS UNTUK TOMBOL KERANJANG
           actions: [
             IconButton(
-              icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              icon: const Icon(
+                Icons.shopping_cart,
+                color: Colors.white,
+              ),
               onPressed: () {
                 // Navigate ke halaman keranjang
                 Navigator.push(
@@ -49,6 +218,81 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Search Bar
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Cari sparepart...',
+                        prefixIcon: Icon(Icons.search, color: Color(0xFF122C4F)),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  // Filter Button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Color(0xFF122C4F),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.tune, color: Colors.white),
+                      onPressed: _showFilterDialog,
+                      tooltip: 'Filter',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Active Filters Display
+              if (selectedKategori != null || minHarga != null || maxHarga != null)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.filter_alt, size: 16, color: Color(0xFF122C4F)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Filter: ${selectedKategori ?? ""} ${minHarga != null ? "Min: Rp $minHarga" : ""} ${maxHarga != null ? "Max: Rp $maxHarga" : ""}',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF122C4F)),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedKategori = null;
+                            minHarga = null;
+                            maxHarga = null;
+                          });
+                        },
+                        child: Icon(Icons.close, size: 16, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+              if (selectedKategori != null || minHarga != null || maxHarga != null)
+                const SizedBox(height: 8),
+
               const Text(
                 "Beli Cepat",
                 style: TextStyle(
@@ -64,7 +308,9 @@ class _HomePageState extends State<HomePage> {
                   builder: (context, snapshot) {
                     // Loading state
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
                     }
 
                     // Error state
@@ -114,16 +360,48 @@ class _HomePageState extends State<HomePage> {
                     }
 
                     // Data loaded successfully
-                    List<ProductModel> products = snapshot.data!;
+                    List<ProductModel> allProducts = snapshot.data!;
+                    List<ProductModel> products = _filterProducts(allProducts);
+
+                    // Empty state after filtering
+                    if (products.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 60,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Tidak ada produk yang sesuai',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Coba ubah filter pencarian',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
                     return GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2, // 2 kolom
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 0.7, // biar proporsi kayak contoh
-                          ),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2, // 2 kolom
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.7, // biar proporsi kayak contoh
+                      ),
                       itemCount: products.length,
                       itemBuilder: (context, index) {
                         final product = products[index];
@@ -209,9 +487,7 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.yellow[700],
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: const Row(
                                           children: [
