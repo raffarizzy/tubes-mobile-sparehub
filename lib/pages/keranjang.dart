@@ -160,6 +160,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
         backgroundColor: primaryColor,
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SafeArea(
         child: StreamBuilder<List<KeranjangModel>>(

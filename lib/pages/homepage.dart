@@ -199,7 +199,7 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           backgroundColor: const Color(0xFF122C4F),
-          // TAMBAHAN ACTIONS UNTUK TOMBOL KERANJANG
+          // ACTIONS UNTUK TOMBOL KERANJANG
           actions: [
             IconButton(
               icon: const Icon(Icons.shopping_cart, color: Colors.white),
