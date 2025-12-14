@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/services/auth_service.dart';
 import 'package:tubes_sparehub/models/user_model.dart';
-
-import 'package:tubes_sparehub/pages/homepage.dart'; // Import homepage
-import 'package:tubes_sparehub/main.dart'; // Import main untuk navigasi ke MyApp
+import 'package:tubes_sparehub/pages/homepage.dart';
+import 'package:tubes_sparehub/main.dart';
 import 'package:tubes_sparehub/pages/halaman_LoginAndRegister/register.dart';
+import 'package:tubes_sparehub/services/user_session.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,25 +14,18 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // Controller untuk input email dan password
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // Auth service
   final AuthService _authService = AuthService();
 
-  // Variable untuk show/hide password
   bool _obscurePassword = true;
-
-  // Variable untuk loading state
   bool _isLoading = false;
 
-  // Fungsi untuk login
   void _login() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    // Validasi input kosong
     if (email.isEmpty || password.isEmpty) {
       _showErrorDialog('Email dan password tidak boleh kosong!');
       return;
@@ -42,7 +35,6 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    // Cari user di UserData
     try {
       UserModel? user = await _authService.signInWithEmailPassword(
         email: email,
@@ -54,16 +46,16 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (user != null) {
-        // Login berhasil - Navigate ke homepage
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                MyHomePage(title: 'SpareHub', userData: user.toMap()),
-          ),
-        );
+        await UserSession.saveUserData(user.toMap());
+
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/home',
+            arguments: user.toMap(),
+          );
+        }
       } else {
-        // Login gagal
         _showErrorDialog('Login gagal. User tidak ditemukan.');
       }
     } catch (e) {
@@ -74,7 +66,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // Fungsi untuk show error dialog
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -109,7 +100,6 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo atau Icon
                 Container(
                   width: 100,
                   height: 100,
@@ -125,10 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                     },
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
-                // Title
                 const Text(
                   'SpareHub',
                   style: TextStyle(
@@ -137,17 +124,12 @@ class _LoginPageState extends State<LoginPage> {
                     color: Color(0xFF122C4F),
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 const Text(
                   'Login ke akun Anda',
                   style: TextStyle(fontSize: 16, color: Colors.black54),
                 ),
-
                 const SizedBox(height: 40),
-
-                // Email TextField
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -172,10 +154,7 @@ class _LoginPageState extends State<LoginPage> {
                     fillColor: Colors.white,
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Password TextField
                 TextField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -213,10 +192,7 @@ class _LoginPageState extends State<LoginPage> {
                     fillColor: Colors.white,
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
-                // Login Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -250,10 +226,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Register Link - YANG DIUBAH
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -263,7 +236,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        // Navigate ke halaman register
                         Navigator.push(
                           context,
                           MaterialPageRoute(

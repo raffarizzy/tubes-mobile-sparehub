@@ -14,18 +14,22 @@ class XenditService {
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'amount': amount, 'name': name, 'email': email}),
+            body: jsonEncode({
+              'amount': amount,
+              'name': name,
+              'email': email,
+              'successRedirectUrl': 'sparehub://payment/success',
+              'failureRedirectUrl': 'sparehub://payment/failed',
+            }),
           )
           .timeout(const Duration(seconds: 20));
 
-      // ✅ Kalau server error
       if (response.statusCode != 200) {
         throw Exception("Server error: ${response.body}");
       }
 
       final data = jsonDecode(response.body);
 
-      // ✅ Jangan biarkan null lolos
       if (data['invoice_url'] == null ||
           data['invoice_url'].toString().isEmpty) {
         throw Exception("Gagal mendapatkan invoice URL dari server");
