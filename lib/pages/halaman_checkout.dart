@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/main.dart';
 import 'package:tubes_sparehub/data/KeranjangData.dart';
 import 'package:tubes_sparehub/pages/keranjang.dart';
-import 'package:tubes_sparehub/services/xendit_service.dart'; // Sesuaikan path
+import 'package:tubes_sparehub/services/xendit_service.dart';
+import 'package:tubes_sparehub/services/address_service.dart';
+import 'package:tubes_sparehub/services/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -15,45 +18,277 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
-  final _emailController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
   bool _isProcessing = false;
+  bool _isLoadingAddresses = true;
 
-  final List<Map<String, String>> _addresses = [
-    {
-      'name': 'Bagas',
-      'address':
-          'Jl. Kenanga No. 21, RT 05/RW 03, Kelurahan Sukamaju, Kecamatan Tebet, Jakarta Selatan',
-      'phone': '081636472738',
-    },
-    {
-      'name': 'Slamet',
-      'address': 'Jl. Merpati No. 45, Perum Griya Asri, Blok B3, Bekasi Timur',
-      'phone': '081311283830',
-    },
-  ];
-
-  final List<String> _paymentImages = [
-    'assets/images/visa.png',
-    'assets/images/mastercard.png',
-  ];
-
+  List<Map<String, dynamic>> _addresses = [];
   int _selectedAddressIndex = 0;
-  int _selectedPaymentIndex = 1;
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadAddresses();
+  }
+
+  // Load alamat dari Firebase
+  Future<void> _loadAddresses() async {
+    setState(() => _isLoadingAddresses = true);
+
+    try {
+      final addresses = await AddressService.getAllAddresses();
+      final user = AuthService().currentUser;
+
+      List<Map<String, dynamic>> finalAddresses = [];
+
+      // Cek apakah ada alamat yang ditandai sebagai default di subcollection
+      bool hasDefaultInSubcollection = addresses.any(
+        (addr) => addr['isDefault'] == true,
+      );
+
+      // Ambil alamat dari user.alamat sebagai alamat pertama (dari homepage)
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (userDoc.exists) {
+          final userData = userDoc.data();
+          final alamatUser = userData?['alamat'];
+          if (alamatUser != null && alamatUser.toString().isNotEmpty) {
+            // Tambahkan alamat dari homepage sebagai alamat pertama
+            // Jadikan default jika tidak ada alamat default di subcollection
+            finalAddresses.add({
+              'id': 'from_profile',
+              'name': userData?['nama'] ?? 'User',
+              'address': alamatUser,
+              'phone': '-',
+              'isDefault':
+                  !hasDefaultInSubcollection, // Default jika tidak ada alamat default lain
+            });
+          }
+        }
+      }
+
+      // Tambahkan alamat detail dari subcollection
+      finalAddresses.addAll(addresses);
+
+      setState(() {
+        _addresses = finalAddresses;
+        _isLoadingAddresses = false;
+
+        // Cari alamat default, kalau ada
+        final defaultIndex = finalAddresses.indexWhere(
+          (addr) => addr['isDefault'] == true,
+        );
+        if (defaultIndex != -1) {
+          _selectedAddressIndex = defaultIndex;
+        } else if (finalAddresses.isNotEmpty) {
+          _selectedAddressIndex = 0;
+        }
+      });
+    } catch (e) {
+      setState(() => _isLoadingAddresses = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat alamat: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Konfirmasi hapus alamat
+  void _confirmDeleteAddress(String addressId, int index) {
+    // Cek apakah alamat dari profile (tidak bisa dihapus)
+    if (addressId == 'from_profile') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Alamat dari profil tidak bisa dihapus di sini'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Alamat?'),
+        content: const Text('Alamat yang dihapus tidak dapat dikembalikan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await AddressService.deleteAddress(addressId);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Alamat berhasil dihapus!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  _loadAddresses();
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal hapus alamat: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddAddressDialog() {
+    final nameController = TextEditingController();
+    final addressController = TextEditingController();
+    final phoneController = TextEditingController();
+    bool isDefault =
+        _addresses.isEmpty; // Otomatis default jika ini alamat pertama
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Tambah Alamat Baru'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Penerima',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: addressController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Alamat Lengkap',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.home),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor Telepon',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone),
+                  ),
+                ),
+                if (_addresses.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    value: isDefault,
+                    onChanged: (value) {
+                      setDialogState(() => isDefault = value ?? false);
+                    },
+                    title: const Text('Jadikan alamat utama'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.trim().isEmpty ||
+                    addressController.text.trim().isEmpty ||
+                    phoneController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Semua field harus diisi!'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                try {
+                  await AddressService.addAddress({
+                    'name': nameController.text.trim(),
+                    'address': addressController.text.trim(),
+                    'phone': phoneController.text.trim(),
+                    'isDefault': isDefault.toString(),
+                  });
+
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Alamat berhasil ditambahkan!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    _loadAddresses(); // Reload addresses
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal menambah alamat: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Fungsi untuk proses pembayaran dengan Xendit
   Future<void> _processPayment() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_addresses.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Mohon isi email dengan benar'),
-          backgroundColor: Colors.red,
+          content: Text('Silakan tambahkan alamat pengiriman terlebih dahulu!'),
+          backgroundColor: Colors.orange,
         ),
       );
       return;
@@ -63,8 +298,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     try {
       final totalPembayaran = getTotalSetelahDiskon();
-      final email = _emailController.text.trim();
       final selectedAddress = _addresses[_selectedAddressIndex];
+
+      // Gunakan email default berdasarkan nama
+      final email =
+          '${selectedAddress['name']!.toLowerCase().replaceAll(' ', '')}@sparehub.com';
 
       // Panggil Xendit Service
       final invoiceUrl = await XenditService.createInvoice(
@@ -100,48 +338,55 @@ class _CheckoutPageState extends State<CheckoutPage> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.check_circle, color: Colors.green, size: 28),
             SizedBox(width: 12),
-            Text('Invoice Berhasil Dibuat!'),
+            Expanded(
+              child: Text(
+                'Invoice Berhasil Dibuat!',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Invoice pembayaran telah dibuat dan dikirim ke email Anda.',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Invoice pembayaran telah dibuat dan siap untuk dibayar.',
+                style: TextStyle(fontSize: 14),
               ),
-              child: Row(
-                children: const [
-                  Icon(Icons.qr_code_2, color: Colors.blue, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Anda bisa bayar menggunakan QRIS',
-                      style: TextStyle(fontSize: 13, color: Colors.blue),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.qr_code_2, color: Colors.blue, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Anda bisa bayar menggunakan QRIS',
+                        style: TextStyle(fontSize: 13, color: Colors.blue),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Klik tombol di bawah untuk membuka halaman pembayaran:',
-              style: TextStyle(fontSize: 13, color: Colors.black54),
-            ),
-          ],
+              const SizedBox(height: 16),
+              const Text(
+                'Klik tombol di bawah untuk membuka halaman pembayaran:',
+                style: TextStyle(fontSize: 13, color: Colors.black54),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -184,11 +429,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 }
               }
             },
-            icon: const Icon(Icons.open_in_new, size: 18),
-            label: const Text('Buka Pembayaran'),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: const Text(
+              'Buka Pembayaran',
+              style: TextStyle(fontSize: 13),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
         ],
@@ -238,46 +487,45 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          bool isWide = constraints.maxWidth > 900;
+      body: _isLoadingAddresses
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                bool isWide = constraints.maxWidth > 900;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: _formKey,
-              child: isWide
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 3, child: _buildLeftColumn()),
-                        const SizedBox(width: 24),
-                        SizedBox(
-                          width: 340,
-                          child: _buildRightColumn(
-                            totalAsli,
-                            totalDiskon,
-                            totalPembayaran,
-                          ),
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: isWide
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 3, child: _buildLeftColumn()),
+                            const SizedBox(width: 24),
+                            SizedBox(
+                              width: 340,
+                              child: _buildRightColumn(
+                                totalAsli,
+                                totalDiskon,
+                                totalPembayaran,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLeftColumn(),
+                            const SizedBox(height: 24),
+                            _buildRightColumn(
+                              totalAsli,
+                              totalDiskon,
+                              totalPembayaran,
+                            ),
+                          ],
                         ),
-                      ],
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLeftColumn(),
-                        const SizedBox(height: 24),
-                        _buildRightColumn(
-                          totalAsli,
-                          totalDiskon,
-                          totalPembayaran,
-                        ),
-                      ],
-                    ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 
@@ -285,84 +533,59 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Input Email untuk Invoice
-        _sectionTitle("Email untuk Invoice"),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade300,
-                blurRadius: 4,
-                offset: const Offset(1, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: const [
-                  Icon(Icons.email_outlined, color: Colors.blue, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Invoice akan dikirim ke email ini',
-                    style: TextStyle(fontSize: 13, color: Colors.black54),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  hintText: 'Masukkan email Anda',
-                  prefixIcon: const Icon(Icons.mail),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email tidak boleh kosong';
-                  }
-                  if (!value.contains('@') || !value.contains('.')) {
-                    return 'Email tidak valid';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-
         _sectionTitle("Pilih Alamat Pengiriman"),
         const SizedBox(height: 12),
+
+        // List alamat horizontal dengan button tambah
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
+              // Tampilkan semua alamat yang ada
               for (int i = 0; i < _addresses.length; i++) ...[
                 _addressCard(
                   index: i,
-                  name: _addresses[i]['name']!,
-                  address: _addresses[i]['address']!,
-                  phone: _addresses[i]['phone']!,
+                  name: _addresses[i]['name'] ?? '',
+                  address: _addresses[i]['address'] ?? '',
+                  phone: _addresses[i]['phone'] ?? '',
+                  isDefault: _addresses[i]['isDefault'] ?? false,
                   selected: _selectedAddressIndex == i,
                   onTap: () => setState(() => _selectedAddressIndex = i),
                 ),
                 const SizedBox(width: 12),
               ],
+              // Button tambah alamat
               _addAddressCard(),
             ],
           ),
         ),
+
+        // Jika belum ada alamat sama sekali
+        if (_addresses.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange.shade700),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Anda belum memiliki alamat. Silakan tambahkan alamat terlebih dahulu.',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         const SizedBox(height: 24),
         _sectionTitle("Detail Produk"),
         const SizedBox(height: 12),
@@ -379,7 +602,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         const SizedBox(height: 24),
         _sectionTitle("Metode Pembayaran"),
         const SizedBox(height: 12),
-        // Info bahwa pembayaran menggunakan Xendit QRIS
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -646,14 +868,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
     required String name,
     required String address,
     required String phone,
+    required bool isDefault,
     required bool selected,
     required VoidCallback onTap,
   }) {
+    final addressData = _addresses[index];
+    final isFromProfile = addressData['id'] == 'from_profile';
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         width: 260,
+        height: 140, // Fixed height biar semua card sama tinggi
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -672,28 +899,85 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Badge "Alamat Utama" di samping nama
+                      if (isDefault) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Text(
+                            'Alamat Utama',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                if (selected)
-                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                // Tombol delete di pojok kanan atas (hanya untuk alamat bukan dari profil)
+                if (!isFromProfile)
+                  GestureDetector(
+                    onTap: () =>
+                        _confirmDeleteAddress(addressData['id'], index),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(address, style: const TextStyle(color: Colors.black87)),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Text(
+                address,
+                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
               "No. HP: $phone",
-              style: const TextStyle(color: Colors.black54),
+              style: const TextStyle(color: Colors.black54, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -701,18 +985,32 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  Widget _addAddressCard() => Container(
-    width: 160,
-    height: 120,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: const Color(0xFFF1F3F4),
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Colors.grey.shade300),
-    ),
-    child: const Text(
-      "+ Tambah Alamat",
-      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+  Widget _addAddressCard() => GestureDetector(
+    onTap: _showAddAddressDialog,
+    child: Container(
+      width: 160,
+      height: 140, // Sama dengan height card alamat
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F3F4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300, width: 1.5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.add_circle_outline, color: Colors.black54, size: 32),
+          SizedBox(height: 8),
+          Text(
+            "Tambah Alamat",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
