@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tubes_sparehub/services/pesanan_service.dart';
-import 'package:tubes_sparehub/services/product_service.dart';
-import 'package:tubes_sparehub/services/rating_service.dart';
-import 'package:tubes_sparehub/services/auth_service.dart';
-import 'package:tubes_sparehub/models/pesanan_model.dart';
-import 'package:tubes_sparehub/models/product_model.dart';
-import 'package:tubes_sparehub/models/rating_model.dart';
+import 'package:tubes_sparehub/services/order_service.dart';
+import 'package:intl/intl.dart';
 
 class RiwayatPesanan extends StatefulWidget {
   const RiwayatPesanan({super.key});
@@ -15,10 +10,36 @@ class RiwayatPesanan extends StatefulWidget {
 }
 
 class _RiwayatPesananState extends State<RiwayatPesanan> {
-  final PesananService _pesananService = PesananService();
-  final ProductService _productService = ProductService();
-  final RatingService _ratingService = RatingService();
-  final AuthService _authService = AuthService();
+  List<Map<String, dynamic>> _orders = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOrders();
+  }
+
+  Future<void> _loadOrders() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final orders = await OrderService.getUserOrders();
+      setState(() {
+        _orders = orders;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat riwayat: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -33,154 +54,34 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
     }
   }
 
-  // Show review dialog
-  void _showReviewDialog(String produkId, String namaProduk) {
-    final TextEditingController komentarController = TextEditingController();
-    int rating = 5;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text('Review $namaProduk'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Star rating
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        return IconButton(
-                          icon: Icon(
-                            index < rating ? Icons.star : Icons.star_border,
-                            color: Colors.amber,
-                            size: 32,
-                          ),
-                          onPressed: () {
-                            setDialogState(() {
-                              rating = index + 1;
-                            });
-                          },
-                        );
-                      }),
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      controller: komentarController,
-                      decoration: InputDecoration(
-                        labelText: 'Komentar',
-                        hintText: 'Tulis review Anda di sini...',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 4,
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Batal'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final user = _authService.currentUser;
-                    if (user == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('User tidak ditemukan')),
-                      );
-                      return;
-                    }
-
-                    if (komentarController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Silakan isi komentar')),
-                      );
-                      return;
-                    }
-
-                    try {
-                      RatingModel newRating = RatingModel(
-                        id: '', // auto-generated
-                        produkId: produkId,
-                        userId: user.uid,
-                        rating: rating,
-                        komentar: komentarController.text.trim(),
-                        tanggal: DateTime.now().toString().substring(0, 10),
-                      );
-
-                      await _ratingService.addRating(newRating);
-
-                      if (mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Review berhasil ditambahkan!')),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal menambahkan review: $e')),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF122C4F),
-                  ),
-                  child: Text('Kirim Review', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  String _formatTanggal(String isoDate) {
+  String _formatDate(dynamic timestamp) {
+    if (timestamp == null) return '-';
     try {
-      DateTime dateTime = DateTime.parse(isoDate);
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+      final date = timestamp.toDate();
+      return DateFormat('dd MMM yyyy, HH:mm').format(date);
     } catch (e) {
-      return isoDate;
+      return '-';
     }
   }
 
-  String _formatRupiah(int number) {
-    return number.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        );
+  String _formatRupiah(int amount) {
+    String numStr = amount.toString();
+    String result = '';
+    int count = 0;
+
+    for (int i = numStr.length - 1; i >= 0; i--) {
+      result = numStr[i] + result;
+      count++;
+      if (count == 3 && i != 0) {
+        result = '.$result';
+        count = 0;
+      }
+    }
+    return 'Rp $result';
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = _authService.currentUser;
-
-    if (user == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            "Riwayat Pesanan",
-            style: TextStyle(color: Colors.white),
-          ),
-          centerTitle: true,
-          backgroundColor: const Color(0xFF122C4F),
-          iconTheme: IconThemeData(color: Colors.white),
-        ),
-        body: const Center(
-          child: Text(
-            "Silakan login terlebih dahulu",
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -189,57 +90,31 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFF122C4F),
-        iconTheme: IconThemeData(color: Colors.white),
       ),
-      body: StreamBuilder<List<PesananModel>>(
-        stream: _pesananService.getPesanansByUserId(user.uid),
-        builder: (context, snapshot) {
-          // Loading state
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          // Error state
-          if (snapshot.hasError) {
-            return Center(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _orders.isEmpty
+          ? const Center(
               child: Text(
-                'Error: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red),
+                "Belum ada pesanan.",
+                style: TextStyle(fontSize: 18, color: Colors.grey),
               ),
-            );
-          }
+            )
+          : RefreshIndicator(
+              onRefresh: _loadOrders,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _orders.length,
+                itemBuilder: (context, index) {
+                  final order = _orders[index];
+                  final items = order['items'] as List<dynamic>;
 
-          final pesanans = snapshot.data ?? [];
-
-          // Empty state
-          if (pesanans.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    "Belum ada pesanan.",
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: pesanans.length,
-            itemBuilder: (context, index) {
-              final pesanan = pesanans[index];
-
-              return FutureBuilder<ProductModel?>(
-                future: _productService.getProductById(pesanan.produkId),
-                builder: (context, productSnapshot) {
-                  String namaProduk = 'Loading...';
-                  if (productSnapshot.hasData && productSnapshot.data != null) {
-                    namaProduk = productSnapshot.data!.nama;
+                  // Ambil nama produk pertama, atau "Multiple Items" kalau lebih dari 1
+                  String productName = items.isNotEmpty
+                      ? items[0]['nama'] ?? 'Produk'
+                      : 'Produk';
+                  if (items.length > 1) {
+                    productName += ' +${items.length - 1} lainnya';
                   }
 
                   return Card(
@@ -248,100 +123,134 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      title: Text(
+                        productName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _formatDate(order['createdAt']),
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      trailing: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Product info
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  namaProduk,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  _formatTanggal(pesanan.tanggal),
-                                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Jumlah: ${pesanan.jumlah}x',
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                                SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Rp ${_formatRupiah(pesanan.totalHarga)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: _getStatusColor(pesanan.status).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: _getStatusColor(pesanan.status),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        pesanan.status,
-                                        style: TextStyle(
-                                          color: _getStatusColor(pesanan.status),
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                          Text(
+                            _formatRupiah(order['totalAmount']),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
                           ),
-                          // Review button
-                          Column(
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.rate_review,
-                                  color: Color(0xFFE4A70D),
-                                  size: 28,
-                                ),
-                                onPressed: () {
-                                  _showReviewDialog(pesanan.produkId, namaProduk);
-                                },
-                                tooltip: 'Tulis Review',
-                              ),
-                              Text(
-                                'Review',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFFE4A70D),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            order['status'],
+                            style: TextStyle(
+                              color: _getStatusColor(order['status']),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
+                      onTap: () {
+                        // Tap untuk lihat detail
+                        _showOrderDetail(order);
+                      },
                     ),
                   );
                 },
-              );
-            },
-          );
-        },
+              ),
+            ),
+    );
+  }
+
+  void _showOrderDetail(Map<String, dynamic> order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (context, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              const Text(
+                'Detail Pesanan',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Divider(height: 30),
+
+              // Info Order
+              _detailRow('Order ID', order['orderId']),
+              _detailRow('Tanggal', _formatDate(order['createdAt'])),
+              _detailRow('Status', order['status']),
+              _detailRow('Total', _formatRupiah(order['totalAmount'])),
+
+              const SizedBox(height: 20),
+              const Text(
+                'Alamat Pengiriman',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(order['address']['name'] ?? '-'),
+              Text(order['address']['address'] ?? '-'),
+              Text('No. HP: ${order['address']['phone'] ?? '-'}'),
+
+              const SizedBox(height: 20),
+              const Text(
+                'Produk',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+
+              // List items
+              ...(order['items'] as List<dynamic>).map(
+                (item) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: item['imagePath'] != null
+                        ? Image.asset(
+                            item['imagePath'],
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.image_not_supported),
+                          )
+                        : const Icon(Icons.motorcycle),
+                    title: Text(item['nama'] ?? 'Produk'),
+                    subtitle: Text('Jumlah: ${item['jumlah']} pcs'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }
