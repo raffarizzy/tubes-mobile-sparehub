@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/services/order_service.dart';
 import 'package:intl/intl.dart';
+import 'package:tubes_sparehub/widgets/review_dialog.dart';
 
 class RiwayatPesanan extends StatefulWidget {
   const RiwayatPesanan({super.key});
@@ -235,6 +236,19 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
                   ),
                 ),
               ),
+              SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // ini nanti ganti jadi function buat nge show dialog rating
+                }, 
+                child: const Text(
+                  'Review produk',
+                  style: TextStyle(color: Colors.white)
+                  ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                ),
+              )
             ],
           ),
         ),
