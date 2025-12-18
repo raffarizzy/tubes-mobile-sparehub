@@ -26,11 +26,10 @@ class HalamanSaya extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text(
-                'Logout',
-                style: TextStyle(color: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
               ),
+              child: const Text('Logout', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -50,17 +49,16 @@ class HalamanSaya extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user =
-        userData ??
-        {
-          'nama': 'Pengguna',
-          'email': 'Tidak diketahui',
-          'alamat': 'Belum diisi',
-          'imagePath': 'assets/images/default_profile.png',
-        };
+    final user = userData ?? {
+      'nama': 'Pengguna',
+      'email': 'Tidak diketahui',
+      'alamat': 'Belum diisi',
+      'imagePath': 'assets/images/default_profile.png',
+    };
 
-    return Scaffold(
-      appBar: AppBar(
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('Profil Saya', style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF122C4F),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -78,14 +76,19 @@ class HalamanSaya extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
 
-            CircleAvatar(radius: 50),
+            CircleAvatar(
+              radius: 50,
+            ),
             const SizedBox(height: 12),
             Text(
               user['nama'],
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
-            Text(user['email'], style: const TextStyle(color: Colors.grey)),
+            Text(
+              user['email'],
+              style: const TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 20),
 
             Card(
@@ -115,7 +118,7 @@ class HalamanSaya extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    icon: const Icon(Icons.edit, color: Colors.white),
+                    icon: const Icon(Icons.edit, color: Colors.white,),
                     label: const Text(
                       "Edit Profil",
                       style: TextStyle(fontSize: 16, color: Colors.white),
@@ -159,6 +162,7 @@ class HalamanSaya extends StatelessWidget {
             const SizedBox(height: 20),
           ],
         ),
+      ),
       ),
     );
   }
