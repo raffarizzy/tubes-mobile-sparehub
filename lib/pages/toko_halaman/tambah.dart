@@ -120,6 +120,7 @@ class _Tambah extends State<Tambah> {
                       Navigator.pop(context, {
                         'id' : idIncrement+1,
                         'nama': _namaController.text,
+                        'deskripsi': _deskripsiController.text,
                         'harga': _hargaController.text,
                         'jumlah': int.parse(_jumlahController.text),
                       });
