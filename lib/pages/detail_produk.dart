@@ -152,11 +152,11 @@ class _DetailProdukState extends State<DetailProduk> {
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
 
-        // Icon keranjang dengan badge counter di kanan atas
+        // Icon keranjang dengan badge counter
         actions: [
           Stack(
             children: [
-              // Icon keranjang - klik untuk ke halaman keranjang
+              // Icon keranjang 
               IconButton(
                 icon: const Icon(
                   Icons.shopping_cart_outlined,

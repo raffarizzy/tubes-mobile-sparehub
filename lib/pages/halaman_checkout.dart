@@ -5,6 +5,7 @@ import 'package:tubes_sparehub/pages/keranjang.dart';
 import 'package:tubes_sparehub/services/xendit_service.dart';
 import 'package:tubes_sparehub/services/address_service.dart';
 import 'package:tubes_sparehub/services/auth_service.dart';
+import 'package:tubes_sparehub/services/order_service.dart'; // ✅ IMPORT ORDER SERVICE
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -282,7 +283,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // Fungsi untuk proses pembayaran dengan Xendit
+  // ✅ FUNGSI PROSES PEMBAYARAN - UPDATE
   Future<void> _processPayment() async {
     if (_addresses.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -309,6 +310,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
         amount: totalPembayaran,
         name: selectedAddress['name']!,
         email: email,
+      );
+
+      // ✅ SIMPAN ORDER KE FIRESTORE SETELAH INVOICE BERHASIL DIBUAT
+      await OrderService.createOrder(
+        items: widget.cartItems,
+        totalAmount: totalPembayaran,
+        address: {
+          'name': selectedAddress['name'],
+          'address': selectedAddress['address'],
+          'phone': selectedAddress['phone'],
+        },
+        invoiceUrl: invoiceUrl,
       );
 
       setState(() => _isProcessing = false);

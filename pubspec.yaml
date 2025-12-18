@@ -41,6 +41,7 @@ dependencies:
   url_launcher: ^6.3.2
   app_links: ^6.4.1
   shared_preferences: ^2.5.4
+  intl: ^0.18.0
   
 
 dev_dependencies:
