@@ -67,4 +67,28 @@ class ProductModel {
       'kategori': kategori,
     };
   }
+
+  ProductModel copyWith({
+    String? id,
+    String? nama,
+    int? harga,
+    String? deskripsi,
+    String? imagePath,
+    String? tokoId,
+    int? stok,
+    double? diskon,
+    String? kategori,
+  }) {
+    return ProductModel(
+      id: id ?? this.id,
+      nama: nama ?? this.nama,
+      harga: harga ?? this.harga,
+      deskripsi: deskripsi ?? this.deskripsi,
+      imagePath: imagePath ?? this.imagePath,
+      tokoId: tokoId ?? this.tokoId,
+      stok: stok ?? this.stok,
+      diskon: diskon ?? this.diskon,
+      kategori: kategori ?? this.kategori,
+    );
+  }
 }

@@ -59,16 +59,11 @@ class ProductService {
   }
 
   // Update product
-  Future<void> updateProduct(
-    String productId,
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      await _firestore.collection('products').doc(productId).update(data);
-    } catch (e) {
-      print('Error updating product: $e');
-      throw 'Gagal mengupdate produk. Silakan coba lagi.';
-    }
+  Future<void> updateProduct(ProductModel product) async {
+    await _firestore
+        .collection('products')
+        .doc(product.id)
+        .update(product.toFirestore());
   }
 
   // Delete product
