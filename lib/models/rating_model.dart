@@ -4,6 +4,7 @@ class RatingModel {
   final String id;
   final String produkId;
   final String userId;
+  final String userName;
   final int rating;
   final String komentar;
   final String tanggal;
@@ -12,6 +13,7 @@ class RatingModel {
     required this.id,
     required this.produkId,
     required this.userId,
+    this.userName = 'Anonymous', // Default value if not provided
     required this.rating,
     required this.komentar,
     required this.tanggal,
@@ -24,6 +26,7 @@ class RatingModel {
       id: doc.id,
       produkId: data['produkId'] ?? '',
       userId: data['userId'] ?? '',
+      userName: data['userName'] ?? 'Anonymous',
       rating: data['rating'] ?? 0,
       komentar: data['komentar'] ?? '',
       tanggal: data['tanggal'] ?? '',
@@ -35,6 +38,7 @@ class RatingModel {
     return {
       'produkId': produkId,
       'userId': userId,
+      'userName': userName,
       'rating': rating,
       'komentar': komentar,
       'tanggal': tanggal,
@@ -47,6 +51,7 @@ class RatingModel {
       'id': id,
       'produkId': produkId,
       'userId': userId,
+      'userName': userName,
       'rating': rating,
       'komentar': komentar,
       'tanggal': tanggal,

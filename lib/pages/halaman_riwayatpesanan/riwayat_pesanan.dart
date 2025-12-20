@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:tubes_sparehub/services/order_service.dart';
 import 'package:intl/intl.dart';
 import 'package:tubes_sparehub/widgets/review_dialog.dart';
+import 'package:tubes_sparehub/services/rating_service.dart';
+import 'package:tubes_sparehub/services/auth_service.dart';
 
 class RiwayatPesanan extends StatefulWidget {
   const RiwayatPesanan({super.key});
@@ -236,19 +238,91 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
                   ),
                 ),
               ),
-              SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // ini nanti ganti jadi function buat nge show dialog rating
-                }, 
-                child: const Text(
-                  'Review produk',
-                  style: TextStyle(color: Colors.white)
+              const SizedBox(height: 40),
+
+              // Tombol Review untuk setiap produk
+              const Text(
+                'Review Produk',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+
+              // List tombol review untuk setiap produk
+              ...(order['items'] as List<dynamic>).map((item) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Builder(
+                    builder: (btnContext) {
+                      return ElevatedButton(
+                        onPressed: () async {
+                          // Cek apakah item punya produkId atau id
+                          String? produkId = item['id']?.toString();
+
+                          print('DEBUG: Attempting to review product');
+                          print('DEBUG: Product ID: $produkId');
+                          print('DEBUG: Item data: $item');
+                          print('DEBUG: All order data: $order');
+
+                          if (produkId == null || produkId.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Maaf, order ini dibuat sebelum sistem review. Silakan buat order baru untuk review produk.',
+                                ),
+                                backgroundColor: Colors.orange,
+                                duration: Duration(seconds: 4),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final user = AuthService().currentUser;
+                          if (user != null) {
+                            final hasReviewed = await RatingService()
+                                .hasUserReviewedProduct(user.uid, produkId);
+
+                            if (hasReviewed) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Anda sudah memberikan review untuk produk ini',
+                                  ),
+                                  backgroundColor: Colors.blue,
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                              return;
+                            }
+                          }
+
+                          // Show dialog dengan rootNavigator agar muncul di atas bottom sheet
+                          showDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            builder: (dialogContext) {
+                              print(
+                                'DEBUG: Dialog builder called with Product ID: $produkId',
+                              );
+                              return ReviewDialog(produkId: produkId);
+                            },
+                          ).then((value) {
+                            // Tutup bottom sheet setelah dialog ditutup
+                            Navigator.pop(context);
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber,
+                          minimumSize: const Size(double.infinity, 45),
+                        ),
+                        child: Text(
+                          'Review: ${item['nama'] ?? 'Produk'}',
+                          style: const TextStyle(color: Color(0xFF122C4F)),
+                        ),
+                      );
+                    },
                   ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                ),
-              )
+                );
+              }),
             ],
           ),
         ),

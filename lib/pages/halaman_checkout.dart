@@ -5,7 +5,8 @@ import 'package:tubes_sparehub/pages/keranjang.dart';
 import 'package:tubes_sparehub/services/xendit_service.dart';
 import 'package:tubes_sparehub/services/address_service.dart';
 import 'package:tubes_sparehub/services/auth_service.dart';
-import 'package:tubes_sparehub/services/order_service.dart'; // ✅ IMPORT ORDER SERVICE
+import 'package:tubes_sparehub/services/order_service.dart';
+import 'package:tubes_sparehub/services/product_service.dart'; // ✅ IMPORT PRODUCT SERVICE untuk reduce stock
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,6 +20,8 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
+  final ProductService _productService = ProductService();
+
   bool _isProcessing = false;
   bool _isLoadingAddresses = true;
 
@@ -323,6 +326,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
         },
         invoiceUrl: invoiceUrl,
       );
+
+      // ✅ REDUCE STOCK untuk setiap produk yang dibeli
+      for (var item in widget.cartItems) {
+        try {
+          String productId = item['id']?.toString() ?? '';
+          int quantity = item['jumlah'] ?? 0;
+
+          if (productId.isNotEmpty && quantity > 0) {
+            await _productService.reduceStock(productId, quantity);
+            print('Stock reduced for product $productId by $quantity units');
+          }
+        } catch (e) {
+          print('Warning: Failed to reduce stock for item: $e');
+          // Continue even if stock reduction fails for one item
+        }
+      }
 
       setState(() => _isProcessing = false);
 

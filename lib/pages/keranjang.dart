@@ -44,19 +44,40 @@ class _KeranjangPageState extends State<KeranjangPage> {
   final ProductService _productService = ProductService();
   final AuthService _authService = AuthService();
 
+  // Cached streams to prevent rebuild flicker
+  late final Stream<List<KeranjangModel>>? _keranjangStream;
+  late final Stream<List<ProductModel>> _productsStream;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize streams ONCE in initState
+    final user = _authService.currentUser;
+    if (user != null) {
+      _keranjangStream = _keranjangService.getKeranjangByUserId(user.uid);
+    } else {
+      _keranjangStream = null;
+    }
+
+    _productsStream = _productService.getAllProducts();
+  }
+
   // Format harga ke bentuk rupiah
   String _formatRupiah(int number) {
     int integerPart = number.toInt();
     String result = integerPart.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        );
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
     return result;
   }
 
   // Hitung total harga keranjang
   int _calculateTotalPrice(
-      List<KeranjangModel> keranjangItems, Map<String, ProductModel> productsMap) {
+    List<KeranjangModel> keranjangItems,
+    Map<String, ProductModel> productsMap,
+  ) {
     int total = 0;
 
     for (var item in keranjangItems) {
@@ -70,16 +91,26 @@ class _KeranjangPageState extends State<KeranjangPage> {
   }
 
   // Tambah jumlah item di keranjang
-  Future<void> _incrementQuantity(KeranjangModel item) async {
+  Future<void> _incrementQuantity(KeranjangModel item, int stokTersedia) async {
     try {
-      await _keranjangService.updateKeranjang(
-        item.id,
-        {'jumlah': item.jumlah + 1},
-      );
+      // Cek apakah quantity + 1 melebihi stok
+      if (item.jumlah + 1 > stokTersedia) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Stok tidak mencukupi. Maksimal: $stokTersedia unit'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      await _keranjangService.updateKeranjang(item.id, {
+        'jumlah': item.jumlah + 1,
+      });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengupdate jumlah: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal mengupdate jumlah: $e')));
     }
   }
 
@@ -87,17 +118,16 @@ class _KeranjangPageState extends State<KeranjangPage> {
   Future<void> _decrementQuantity(KeranjangModel item) async {
     try {
       if (item.jumlah > 1) {
-        await _keranjangService.updateKeranjang(
-          item.id,
-          {'jumlah': item.jumlah - 1},
-        );
+        await _keranjangService.updateKeranjang(item.id, {
+          'jumlah': item.jumlah - 1,
+        });
       } else {
         await _removeItem(item);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengupdate jumlah: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal mengupdate jumlah: $e')));
     }
   }
 
@@ -112,9 +142,9 @@ class _KeranjangPageState extends State<KeranjangPage> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menghapus item: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menghapus item: $e')));
     }
   }
 
@@ -164,7 +194,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
       ),
       body: SafeArea(
         child: StreamBuilder<List<KeranjangModel>>(
-          stream: _keranjangService.getKeranjangByUserId(user.uid),
+          stream: _keranjangStream, // Use cached stream
           builder: (context, keranjangSnapshot) {
             // Loading state
             if (keranjangSnapshot.connectionState == ConnectionState.waiting) {
@@ -190,9 +220,10 @@ class _KeranjangPageState extends State<KeranjangPage> {
 
             // Fetch all product details
             return StreamBuilder<List<ProductModel>>(
-              stream: _productService.getAllProducts(),
+              stream: _productsStream, // Use cached stream
               builder: (context, productSnapshot) {
-                if (productSnapshot.connectionState == ConnectionState.waiting) {
+                if (productSnapshot.connectionState ==
+                    ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
@@ -375,7 +406,8 @@ class _KeranjangPageState extends State<KeranjangPage> {
                           ),
                           _buildQuantityButton(
                             icon: Icons.add,
-                            onPressed: () => _incrementQuantity(item),
+                            onPressed: () =>
+                                _incrementQuantity(item, produk.stok),
                           ),
                         ],
                       ),
@@ -405,7 +437,9 @@ class _KeranjangPageState extends State<KeranjangPage> {
   }
 
   Widget _buildCheckoutFooter(
-      List<KeranjangModel> keranjangItems, Map<String, ProductModel> productsMap) {
+    List<KeranjangModel> keranjangItems,
+    Map<String, ProductModel> productsMap,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(

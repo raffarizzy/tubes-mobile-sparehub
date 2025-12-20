@@ -102,4 +102,30 @@ class ProductService {
       return [];
     }
   }
+
+  // Reduce stock after checkout
+  Future<void> reduceStock(String productId, int quantity) async {
+    try {
+      // Get current product data
+      final product = await getProductById(productId);
+      if (product == null) {
+        throw 'Produk tidak ditemukan';
+      }
+
+      // Calculate new stock
+      int newStok = product.stok - quantity;
+      if (newStok < 0) {
+        throw 'Stok tidak mencukupi';
+      }
+
+      // Update stock in Firestore
+      await updateProduct(productId, {'stok': newStok});
+      print(
+        'Stock reduced for product $productId: ${product.stok} -> $newStok',
+      );
+    } catch (e) {
+      print('Error reducing stock: $e');
+      throw 'Gagal mengurangi stok: $e';
+    }
+  }
 }

@@ -103,4 +103,21 @@ class RatingService {
       return 0.0;
     }
   }
+
+  // Check if user has already reviewed a product
+  Future<bool> hasUserReviewedProduct(String userId, String productId) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('ratings')
+          .where('userId', isEqualTo: userId)
+          .where('produkId', isEqualTo: productId)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking if user reviewed product: $e');
+      return false;
+    }
+  }
 }
