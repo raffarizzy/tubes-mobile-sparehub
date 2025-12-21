@@ -7,6 +7,7 @@ import 'package:tubes_sparehub/services/toko_service.dart';
 import 'package:tubes_sparehub/services/auth_service.dart';
 import 'package:tubes_sparehub/models/product_model.dart';
 import 'package:tubes_sparehub/models/toko_model.dart';
+import 'toko_halaman/edit.dart';
 
 void main() {
   runApp(SpareShopApp());
@@ -83,9 +84,9 @@ class _tokoSayaState extends State<toko_saya> {
       setState(() {
         isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading toko: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading toko: $e')));
     }
   }
 
@@ -163,10 +164,16 @@ class _tokoSayaState extends State<toko_saya> {
                 }
 
                 // Check if user already has a toko (1 account = 1 toko)
-                final existingTokos = await _tokoService.getTokosByPemilikId(user.uid).first;
+                final existingTokos = await _tokoService
+                    .getTokosByPemilikId(user.uid)
+                    .first;
                 if (existingTokos.isNotEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Anda sudah memiliki toko. Satu akun hanya bisa memiliki satu toko.')),
+                    SnackBar(
+                      content: Text(
+                        'Anda sudah memiliki toko. Satu akun hanya bisa memiliki satu toko.',
+                      ),
+                    ),
                   );
                   Navigator.pop(context);
                   return;
@@ -211,11 +218,17 @@ class _tokoSayaState extends State<toko_saya> {
     );
   }
 
-  Future<void> tambahProduk(String nama, String deskripsi, String harga, int jumlah, int id) async {
+  Future<void> tambahProduk(
+    String nama,
+    String deskripsi,
+    String harga,
+    int jumlah,
+    int id,
+  ) async {
     if (tokoId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Toko ID tidak ditemukan')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Toko ID tidak ditemukan')));
       return;
     }
     try {
@@ -232,13 +245,13 @@ class _tokoSayaState extends State<toko_saya> {
 
       await _productService.addProduct(newProduct);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Produk berhasil ditambahkan')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Produk berhasil ditambahkan')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menambahkan produk: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menambahkan produk: $e')));
     }
   }
 
@@ -246,13 +259,13 @@ class _tokoSayaState extends State<toko_saya> {
     try {
       await _productService.deleteProduct(productId);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Produk berhasil dihapus')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Produk berhasil dihapus')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menghapus produk: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menghapus produk: $e')));
     }
   }
 
@@ -283,7 +296,11 @@ class _tokoSayaState extends State<toko_saya> {
               SizedBox(height: 16),
               Text(
                 'Belum punya toko?',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF122C4F)),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF122C4F),
+                ),
               ),
               SizedBox(height: 8),
               Text(
@@ -319,7 +336,7 @@ class _tokoSayaState extends State<toko_saya> {
             // Header
             Container(
               decoration: BoxDecoration(
-                color: Color(0xFFB3C9E9),
+                color: Color(0xFF122C4F),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(40),
                   bottomRight: Radius.circular(40),
@@ -484,7 +501,10 @@ class _tokoSayaState extends State<toko_saya> {
                               padding: EdgeInsets.all(40),
                               child: Text(
                                 'Belum ada produk',
-                                style: TextStyle(color: Colors.grey, fontSize: 14),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           )
@@ -501,6 +521,15 @@ class _tokoSayaState extends State<toko_saya> {
                                     ? produk.imagePath
                                     : 'assets/images/default_icon.png',
                                 jumlah: produk.stok,
+                                onEdit: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          EditProdukPage(product: produk),
+                                    ),
+                                  );
+                                },
                               ),
                             );
                           }).toList(),
@@ -568,12 +597,15 @@ class _tokoSayaState extends State<toko_saya> {
                 return GestureDetector(
                   onTap: () async {
                     // Convert ProductModel list to Map format for HapusProdukPage
-                    List<Map<String, dynamic>> produkList = products.map((p) => p.toMap()).toList();
+                    List<Map<String, dynamic>> produkList = products
+                        .map((p) => p.toMap())
+                        .toList();
 
                     final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => HapusProdukPage(produkList: produkList),
+                        builder: (context) =>
+                            HapusProdukPage(produkList: produkList),
                       ),
                     );
 
@@ -606,6 +638,7 @@ class ProductCard extends StatelessWidget {
   final String title, price, shopName, location;
   final String imagePath;
   final int jumlah;
+  final VoidCallback? onEdit;
 
   const ProductCard({
     required this.title,
@@ -614,6 +647,7 @@ class ProductCard extends StatelessWidget {
     required this.location,
     required this.imagePath,
     this.jumlah = 1,
+    this.onEdit,
   });
 
   @override
@@ -633,7 +667,9 @@ class ProductCard extends StatelessWidget {
               color: Color(0xFFDDE8F6),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Image.asset(imagePath),
+            child: imagePath.startsWith('http')
+                ? Image.network(imagePath, fit: BoxFit.cover)
+                : Image.asset(imagePath),
           ),
           SizedBox(width: 12),
           Expanded(
@@ -661,19 +697,26 @@ class ProductCard extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(width: 8),
-          Container(
-            alignment: Alignment.center,
-            width: 25,
-            height: 25,
-            decoration: BoxDecoration(
-              color: Color(0xFF0B2C54),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              jumlah.toString(),
-              style: TextStyle(color: Colors.white, fontSize: 12),
-            ),
+          Column(
+            children: [
+              IconButton(
+                icon: Icon(Icons.edit, size: 20, color: Color(0xFF0B2C54)),
+                onPressed: onEdit,
+              ),
+              Container(
+                alignment: Alignment.center,
+                width: 25,
+                height: 25,
+                decoration: BoxDecoration(
+                  color: Color(0xFF0B2C54),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  jumlah.toString(),
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ],
           ),
         ],
       ),
