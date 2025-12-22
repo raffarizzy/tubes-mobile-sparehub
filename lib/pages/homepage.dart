@@ -664,36 +664,39 @@ class _HomePageState extends State<HomePage> {
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
-                                            child: Image.asset(
-                                              product.imagePath.isNotEmpty
-                                                  ? product.imagePath
-                                                  : 'assets/images/oliMobil.png',
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              errorBuilder:
-                                                  (context, error, stackTrace) {
-                                                    // Kalo gambar ga ada, tampilkan placeholder
-                                                    return Container(
-                                                      width: double.infinity,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.grey[300],
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              12,
-                                                            ),
-                                                      ),
-                                                      child: Center(
-                                                        child: Icon(
-                                                          Icons
-                                                              .image_not_supported,
-                                                          size: 50,
-                                                          color:
-                                                              Colors.grey[600],
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                            ),
+                                            child: Image.network(
+  product.imagePath.isNotEmpty
+      ? product.imagePath
+      : 'https://via.placeholder.com/300x200?text=No+Image',
+  fit: BoxFit.cover,
+  width: double.infinity,
+  errorBuilder: (context, error, stackTrace) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported,
+          size: 50,
+          color: Colors.grey[600],
+        ),
+      ),
+    );
+  },
+  loadingBuilder: (context, child, loadingProgress) {
+    if (loadingProgress == null) return child;
+    return Container(
+      width: double.infinity,
+      height: 200,
+      alignment: Alignment.center,
+      child: CircularProgressIndicator(),
+    );
+  },
+),
+
                                           ),
                                         ),
                                         const SizedBox(height: 8),

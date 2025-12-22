@@ -224,6 +224,7 @@ class _tokoSayaState extends State<toko_saya> {
     String harga,
     int jumlah,
     int id,
+    String imageUrl
   ) async {
     if (tokoId == null) {
       ScaffoldMessenger.of(
@@ -237,7 +238,7 @@ class _tokoSayaState extends State<toko_saya> {
         nama: nama,
         harga: int.tryParse(harga.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
         deskripsi: deskripsi,
-        imagePath: 'assets/images/default_icon.png',
+        imagePath: imageUrl,
         tokoId: tokoId!,
         stok: jumlah,
         kategori: 'Otomotif',
@@ -569,6 +570,7 @@ class _tokoSayaState extends State<toko_saya> {
                     result['harga'],
                     result['jumlah'],
                     result['id'],
+                    result['gambar']
                   );
                 }
               },

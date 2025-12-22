@@ -66,6 +66,14 @@ class ProductService {
         .update(product.toFirestore());
   }
 
+  Future<void> updateProductStock(String productId, int newStok) async {
+  await _firestore
+      .collection('products')
+      .doc(productId)
+      .update({'stok': newStok});
+  }
+
+
   // Delete product
   Future<void> deleteProduct(String productId) async {
     try {
@@ -95,6 +103,30 @@ class ProductService {
     } catch (e) {
       print('Error searching products: $e');
       return [];
+    }
+  }
+
+  // Reduce stock after checkout
+  Future<void> reduceStock(String productId, int quantity) async {
+    try {
+      final product = await getProductById(productId);
+      if (product == null) {
+        throw 'Produk tidak ditemukan';
+      }
+
+      int newStok = product.stok - quantity;
+      if (newStok < 0) {
+        throw 'Stok tidak mencukupi';
+      }
+
+      await updateProductStock(productId, newStok);
+
+      print(
+        'Stock reduced for product $productId: ${product.stok} -> $newStok',
+      );
+    } catch (e) {
+      print('Error reducing stock: $e');
+      throw 'Gagal mengurangi stok: $e';
     }
   }
 }

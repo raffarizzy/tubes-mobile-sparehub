@@ -65,7 +65,35 @@ class HapusProdukPage extends StatelessWidget {
                           color: Color(0xFFDDE8F6),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Image.asset(produk['imagePath']),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            produk['imagePath'] ??
+                                'https://via.placeholder.com/150?text=No+Image',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.grey[600],
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                       SizedBox(width: 12),
                       Expanded(
@@ -74,11 +102,17 @@ class HapusProdukPage extends StatelessWidget {
                           children: [
                             Text(
                               produk['nama'],
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                             Text(
                               produk['harga'].toString(),
-                              style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
