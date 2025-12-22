@@ -118,7 +118,7 @@ class _Tambah extends State<Tambah> {
 
               /// KATEGORI (DROPDOWN)
               DropdownButtonFormField<String>(
-                value: _selectedKategori = null,
+                value: _selectedKategori,
                 decoration: _inputDecoration('Kategori'),
                 items: const [
                   DropdownMenuItem(value: 'mesin', child: Text('Mesin')),

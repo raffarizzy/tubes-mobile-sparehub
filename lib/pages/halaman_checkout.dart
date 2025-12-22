@@ -5,7 +5,9 @@ import 'package:tubes_sparehub/pages/keranjang.dart';
 import 'package:tubes_sparehub/services/xendit_service.dart';
 import 'package:tubes_sparehub/services/address_service.dart';
 import 'package:tubes_sparehub/services/auth_service.dart';
-import 'package:tubes_sparehub/services/order_service.dart'; // ✅ IMPORT ORDER SERVICE
+import 'package:tubes_sparehub/services/order_service.dart';
+import 'package:tubes_sparehub/services/product_service.dart'; // IMPORT PRODUCT SERVICE untuk reduce stock
+import 'package:tubes_sparehub/services/keranjang_service.dart'; // IMPORT KERANJANG SERVICE untuk clear cart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,6 +21,9 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
+  final ProductService _productService = ProductService();
+  final KeranjangService _keranjangService = KeranjangService();
+
   bool _isProcessing = false;
   bool _isLoadingAddresses = true;
 
@@ -283,7 +288,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ FUNGSI PROSES PEMBAYARAN - UPDATE
+  // FUNGSI PROSES PEMBAYARAN - UPDATE
   Future<void> _processPayment() async {
     if (_addresses.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -312,9 +317,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
         email: email,
       );
 
-      // ✅ SIMPAN ORDER KE FIRESTORE SETELAH INVOICE BERHASIL DIBUAT
+      final enrichedItems = await OrderService.enrichItemsWithTokoId(
+        widget.cartItems,
+      );
+
+      // SIMPAN ORDER KE FIRESTORE SETELAH INVOICE BERHASIL DIBUAT
       await OrderService.createOrder(
-        items: widget.cartItems,
+        items: enrichedItems,
         totalAmount: totalPembayaran,
         address: {
           'name': selectedAddress['name'],
@@ -323,6 +332,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
         },
         invoiceUrl: invoiceUrl,
       );
+
+      // REDUCE STOCK untuk setiap produk yang dibeli
+      for (var item in widget.cartItems) {
+        try {
+          String productId = item['id']?.toString() ?? '';
+          int quantity = item['jumlah'] ?? 0;
+
+          if (productId.isNotEmpty && quantity > 0) {
+            await _productService.reduceStock(productId, quantity);
+            print('Stock reduced for product $productId by $quantity units');
+          }
+        } catch (e) {
+          print('Warning: Failed to reduce stock for item: $e');
+          // Continue even if stock reduction fails for one item
+        }
+      }
 
       setState(() => _isProcessing = false);
 
@@ -403,14 +428,30 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const MyHomePage(title: 'SpareHub'),
-                ),
-              );
+            onPressed: () async {
+              // CLEAR KERANJANG DARI FIREBASE juga saat user pilih "Nanti Saja"
+              final user = AuthService().currentUser;
+              if (user != null) {
+                try {
+                  await _keranjangService.clearKeranjang(user.uid);
+                  debugPrint('Keranjang berhasil dibersihkan dari Firebase');
+                } catch (e) {
+                  debugPrint('Warning: Gagal membersihkan keranjang: $e');
+                }
+              }
+
+              // Clear dari memory juga
+              keranjang.clear();
+
+              if (mounted) {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MyHomePage(title: 'SpareHub'),
+                  ),
+                );
+              }
             },
             child: const Text('Nanti Saja'),
           ),
@@ -423,6 +464,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
 
+                // CLEAR KERANJANG DARI FIREBASE
+                final user = AuthService().currentUser;
+                if (user != null) {
+                  try {
+                    await _keranjangService.clearKeranjang(user.uid);
+                    debugPrint('Keranjang berhasil dibersihkan dari Firebase');
+                  } catch (e) {
+                    debugPrint('Warning: Gagal membersihkan keranjang: $e');
+                  }
+                }
+
+                // Clear dari memory juga (backward compatibility)
                 keranjang.clear();
 
                 if (mounted) {
@@ -748,27 +801,37 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.asset(
-            product['imagePath'] ?? '',
-            width: 90,
-            height: 90,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              product['imagePath'] != null &&
+                      product['imagePath'].toString().startsWith('http')
+                  ? product['imagePath']
+                  : 'https://via.placeholder.com/150',
+              width: 90,
+              height: 90,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return SizedBox(
+                  width: 90,
+                  height: 90,
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 90,
+                  height: 90,
                   color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.motorcycle,
-                  color: Colors.grey,
-                  size: 40,
-                ),
-              );
-            },
+                  child: const Icon(Icons.image_not_supported),
+                );
+              },
+            ),
           ),
+
           const SizedBox(width: 12),
           Expanded(
             child: Column(
