@@ -52,4 +52,21 @@ class TokoModel {
       'lokasi': lokasi,
     };
   }
+
+  TokoModel copyWith({
+  String? namaToko,
+  String? deskripsi,
+  String? lokasi,
+}) {
+  return TokoModel(
+    id: id,
+    namaToko: namaToko ?? this.namaToko,
+    pemilikId: pemilikId,
+    deskripsi: deskripsi ?? this.deskripsi,
+    logoPath: logoPath,
+    lokasi: lokasi ?? this.lokasi,
+  );
 }
+}
+
+

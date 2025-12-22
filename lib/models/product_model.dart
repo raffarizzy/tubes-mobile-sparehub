@@ -10,6 +10,7 @@ class ProductModel {
   final int stok;
   final double? diskon;
   final String? kategori;
+   final String imageUrl;
 
   ProductModel({
     required this.id,
@@ -21,6 +22,7 @@ class ProductModel {
     required this.stok,
     this.diskon,
     this.kategori,
+    required this.imageUrl,
   });
 
   // Convert from Firestore document
@@ -36,6 +38,7 @@ class ProductModel {
       stok: data['stok'] ?? 0,
       diskon: data['diskon']?.toDouble(),
       kategori: data['kategori'],
+      imageUrl: data['imageUrl'] ?? '',
     );
   }
 
@@ -78,6 +81,7 @@ class ProductModel {
     int? stok,
     double? diskon,
     String? kategori,
+    String? imageUrl,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -89,6 +93,7 @@ class ProductModel {
       stok: stok ?? this.stok,
       diskon: diskon ?? this.diskon,
       kategori: kategori ?? this.kategori,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 }

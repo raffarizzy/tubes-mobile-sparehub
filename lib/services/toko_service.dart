@@ -57,14 +57,14 @@ class TokoService {
   }
 
   // Update toko
-  Future<void> updateToko(String tokoId, Map<String, dynamic> data) async {
-    try {
-      await _firestore.collection('tokos').doc(tokoId).update(data);
-    } catch (e) {
-      print('Error updating toko: $e');
-      throw 'Gagal mengupdate toko. Silakan coba lagi.';
-    }
+  Future<void> updateToko(TokoModel toko) async {
+  await _firestore.collection('tokos').doc(toko.id).update({
+    'namaToko': toko.namaToko,
+    'deskripsi': toko.deskripsi,
+    'lokasi': toko.lokasi,
+    });
   }
+
 
   // Delete toko
   Future<void> deleteToko(String tokoId) async {
