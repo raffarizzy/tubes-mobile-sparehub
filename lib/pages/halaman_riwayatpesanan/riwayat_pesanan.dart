@@ -46,12 +46,14 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Selesai':
+      case 'selesai':
         return Colors.green;
-      case 'Dikirim':
+      case 'diproses':
         return Colors.orange;
-      case 'Menunggu Pembayaran':
+      case 'menungguKonfirmasi':
         return Colors.redAccent;
+      case 'dikirim':
+        return Colors.blue;
       default:
         return Colors.grey;
     }

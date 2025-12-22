@@ -31,8 +31,10 @@ class Lacak extends StatelessWidget {
                 children: [
                   Icon(Icons.inbox_outlined, size: 80, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text('Belum ada pesanan', 
-                    style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  Text(
+                    'Belum ada pesanan',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
                 ],
               ),
             );
@@ -99,8 +101,10 @@ class Lacak extends StatelessWidget {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Color(0xFF0B2C54),
                               ),
-                              child: Text('Terima', 
-                                style: TextStyle(color: Colors.white)),
+                              child: Text(
+                                'Terima',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ),
                           SizedBox(width: 8),
@@ -120,8 +124,10 @@ class Lacak extends StatelessWidget {
                           backgroundColor: Color(0xFF0B2C54),
                           minimumSize: Size(double.infinity, 40),
                         ),
-                        child: Text('Kirim Pesanan',
-                          style: TextStyle(color: Colors.white)),
+                        child: Text(
+                          'Kirim Pesanan',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                   ],
                 ),
@@ -244,9 +250,7 @@ class Lacak extends StatelessWidget {
                 Navigator.pop(context);
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0B2C54),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF0B2C54)),
             child: Text('Kirim', style: TextStyle(color: Colors.white)),
           ),
         ],

@@ -315,7 +315,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         email: email,
       );
 
-      final enrichedItems = await OrderService.enrichItemsWithTokoId(widget.cartItems);
+      final enrichedItems = await OrderService.enrichItemsWithTokoId(
+        widget.cartItems,
+      );
 
       // ✅ SIMPAN ORDER KE FIRESTORE SETELAH INVOICE BERHASIL DIBUAT
       await OrderService.createOrder(
@@ -769,27 +771,37 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.asset(
-            product['imagePath'] ?? '',
-            width: 90,
-            height: 90,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              product['imagePath'] != null &&
+                      product['imagePath'].toString().startsWith('http')
+                  ? product['imagePath']
+                  : 'https://via.placeholder.com/150',
+              width: 90,
+              height: 90,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return SizedBox(
+                  width: 90,
+                  height: 90,
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 90,
+                  height: 90,
                   color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.motorcycle,
-                  color: Colors.grey,
-                  size: 40,
-                ),
-              );
-            },
+                  child: const Icon(Icons.image_not_supported),
+                );
+              },
+            ),
           ),
+
           const SizedBox(width: 12),
           Expanded(
             child: Column(
