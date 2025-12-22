@@ -6,7 +6,8 @@ import 'package:tubes_sparehub/services/xendit_service.dart';
 import 'package:tubes_sparehub/services/address_service.dart';
 import 'package:tubes_sparehub/services/auth_service.dart';
 import 'package:tubes_sparehub/services/order_service.dart';
-import 'package:tubes_sparehub/services/product_service.dart'; // ✅ IMPORT PRODUCT SERVICE untuk reduce stock
+import 'package:tubes_sparehub/services/product_service.dart'; // IMPORT PRODUCT SERVICE untuk reduce stock
+import 'package:tubes_sparehub/services/keranjang_service.dart'; // IMPORT KERANJANG SERVICE untuk clear cart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,6 +22,7 @@ class CheckoutPage extends StatefulWidget {
 
 class _CheckoutPageState extends State<CheckoutPage> {
   final ProductService _productService = ProductService();
+  final KeranjangService _keranjangService = KeranjangService();
 
   bool _isProcessing = false;
   bool _isLoadingAddresses = true;
@@ -286,7 +288,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ FUNGSI PROSES PEMBAYARAN - UPDATE
+  // FUNGSI PROSES PEMBAYARAN - UPDATE
   Future<void> _processPayment() async {
     if (_addresses.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -319,7 +321,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         widget.cartItems,
       );
 
-      // ✅ SIMPAN ORDER KE FIRESTORE SETELAH INVOICE BERHASIL DIBUAT
+      // SIMPAN ORDER KE FIRESTORE SETELAH INVOICE BERHASIL DIBUAT
       await OrderService.createOrder(
         items: enrichedItems,
         totalAmount: totalPembayaran,
@@ -331,7 +333,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         invoiceUrl: invoiceUrl,
       );
 
-      // ✅ REDUCE STOCK untuk setiap produk yang dibeli
+      // REDUCE STOCK untuk setiap produk yang dibeli
       for (var item in widget.cartItems) {
         try {
           String productId = item['id']?.toString() ?? '';
@@ -426,14 +428,30 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const MyHomePage(title: 'SpareHub'),
-                ),
-              );
+            onPressed: () async {
+              // CLEAR KERANJANG DARI FIREBASE juga saat user pilih "Nanti Saja"
+              final user = AuthService().currentUser;
+              if (user != null) {
+                try {
+                  await _keranjangService.clearKeranjang(user.uid);
+                  debugPrint('Keranjang berhasil dibersihkan dari Firebase');
+                } catch (e) {
+                  debugPrint('Warning: Gagal membersihkan keranjang: $e');
+                }
+              }
+
+              // Clear dari memory juga
+              keranjang.clear();
+
+              if (mounted) {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MyHomePage(title: 'SpareHub'),
+                  ),
+                );
+              }
             },
             child: const Text('Nanti Saja'),
           ),
@@ -446,6 +464,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
 
+                // CLEAR KERANJANG DARI FIREBASE
+                final user = AuthService().currentUser;
+                if (user != null) {
+                  try {
+                    await _keranjangService.clearKeranjang(user.uid);
+                    debugPrint('Keranjang berhasil dibersihkan dari Firebase');
+                  } catch (e) {
+                    debugPrint('Warning: Gagal membersihkan keranjang: $e');
+                  }
+                }
+
+                // Clear dari memory juga (backward compatibility)
                 keranjang.clear();
 
                 if (mounted) {

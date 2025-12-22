@@ -128,63 +128,63 @@ class _HomePageState extends State<HomePage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Text(
-                    //   'Kategori',
-                    //   style: TextStyle(fontWeight: FontWeight.bold),
-                    // ),
-                    // SizedBox(height: 8),
-                    // Wrap(
-                    //   spacing: 8,
-                    //   children: [
-                    //     FilterChip(
-                    //       label: Text('Semua'),
-                    //       selected:
-                    //           selectedKategori == null ||
-                    //           selectedKategori == "Semua",
-                    //       onSelected: (selected) {
-                    //         setDialogState(() {
-                    //           selectedKategori = "Semua";
-                    //         });
-                    //       },
-                    //     ),
-                    //     FilterChip(
-                    //       label: Text('Oli'),
-                    //       selected: selectedKategori == "Oli",
-                    //       onSelected: (selected) {
-                    //         setDialogState(() {
-                    //           selectedKategori = selected ? "Oli" : null;
-                    //         });
-                    //       },
-                    //     ),
-                    //     FilterChip(
-                    //       label: Text('Ban'),
-                    //       selected: selectedKategori == "Ban",
-                    //       onSelected: (selected) {
-                    //         setDialogState(() {
-                    //           selectedKategori = selected ? "Ban" : null;
-                    //         });
-                    //       },
-                    //     ),
-                    //     FilterChip(
-                    //       label: Text('Aki'),
-                    //       selected: selectedKategori == "Aki",
-                    //       onSelected: (selected) {
-                    //         setDialogState(() {
-                    //           selectedKategori = selected ? "Aki" : null;
-                    //         });
-                    //       },
-                    //     ),
-                    //     FilterChip(
-                    //       label: Text('Otomotif'),
-                    //       selected: selectedKategori == "Otomotif",
-                    //       onSelected: (selected) {
-                    //         setDialogState(() {
-                    //           selectedKategori = selected ? "Otomotif" : null;
-                    //         });
-                    //       },
-                    //     ),
-                    //   ],
-                    // ),
+                    Text(
+                      'Kategori',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        FilterChip(
+                          label: Text('Semua'),
+                          selected:
+                              selectedKategori == null ||
+                              selectedKategori == "Semua",
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              selectedKategori = "Semua";
+                            });
+                          },
+                        ),
+                        FilterChip(
+                          label: Text('Body'),
+                          selected: selectedKategori == "body",
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              selectedKategori = selected ? "body" : null;
+                            });
+                          },
+                        ),
+                        FilterChip(
+                          label: Text('Roda'),
+                          selected: selectedKategori == "roda",
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              selectedKategori = selected ? "roda" : null;
+                            });
+                          },
+                        ),
+                        FilterChip(
+                          label: Text('Mesin'),
+                          selected: selectedKategori == "mesin",
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              selectedKategori = selected ? "mesin" : null;
+                            });
+                          },
+                        ),
+                        FilterChip(
+                          label: Text('Lainnya'),
+                          selected: selectedKategori == "lainnya",
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              selectedKategori = selected ? "lainnya" : null;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
                     SizedBox(height: 16),
                     Text(
                       'Range Harga',

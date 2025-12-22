@@ -185,7 +185,7 @@ class _DetailProdukState extends State<DetailProduk> {
               // Badge merah yang menampilkan jumlah item di keranjang
               if (cartItemCount > 0)
                 Positioned(
-                  right: 8,
+                  right: 2,
                   top: 8,
                   child: Container(
                     padding: const EdgeInsets.all(4),
