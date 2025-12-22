@@ -315,9 +315,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
         email: email,
       );
 
+      final enrichedItems = await OrderService.enrichItemsWithTokoId(widget.cartItems);
+
       // ✅ SIMPAN ORDER KE FIRESTORE SETELAH INVOICE BERHASIL DIBUAT
       await OrderService.createOrder(
-        items: widget.cartItems,
+        items: enrichedItems,
         totalAmount: totalPembayaran,
         address: {
           'name': selectedAddress['name'],

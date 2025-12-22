@@ -4,6 +4,35 @@ import 'package:tubes_sparehub/services/auth_service.dart';
 class OrderService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  static Future<List<Map<String, dynamic>>> enrichItemsWithTokoId(
+    List<Map<String, dynamic>> items,
+  ) async {
+    final List<Map<String, dynamic>> enrichedItems = [];
+
+    for (final item in items) {
+      final productId = item['id'];
+
+      final productSnap = await _firestore
+          .collection('products')
+          .doc(productId)
+          .get();
+
+      if (!productSnap.exists) {
+        throw Exception('Produk $productId tidak ditemukan');
+      }
+
+      final productData = productSnap.data()!;
+
+      enrichedItems.add({
+        ...item,
+        'tokoId': productData['tokoId'], // 🔥
+        'tokoName': productData['tokoName'], // optional
+      });
+    }
+
+    return enrichedItems;
+  }
+
   // SIMPAN ORDER (Dual Write)
   static Future<String> createOrder({
     required List<Map<String, dynamic>> items,
@@ -20,6 +49,10 @@ class OrderService {
       // Generate order ID
       final orderId = 'ORD${DateTime.now().millisecondsSinceEpoch}';
 
+      for (var item in items) {
+        print('ITEM: $item');
+      }
+
       // Ambil semua tokoId dari items
       final tokoIds = items
           .map((item) => item['tokoId'] as String?)
@@ -33,7 +66,11 @@ class OrderService {
         'buyerId': user.uid,
         'buyerName': address['name'],
         'buyerPhone': address['phone'],
-        'shippingAddress': address['address'],
+        'address': {
+          'name': address['name'],
+          'phone': address['phone'],
+          'address': address['address'],
+        },
         'items': items,
         'tokoIds': tokoIds, // Untuk seller query
         'totalAmount': totalAmount,
@@ -53,7 +90,7 @@ class OrderService {
             .collection('orders')
             .doc(orderId)
             .set(orderData),
-        
+
         // 2. Di orders (untuk seller)
         _firestore.collection('orders').doc(orderId).set(orderData),
       ]);
@@ -93,28 +130,32 @@ class OrderService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        
-        // Filter items dari toko ini aja
-        final myItems = (data['items'] as List)
-            .where((item) => item['tokoId'] == tokoId)
-            .toList();
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
 
-        return {
-          'id': doc.id,
-          'orderId': data['orderId'],
-          'buyerName': data['buyerName'],
-          'buyerPhone': data['buyerPhone'],
-          'shippingAddress': data['shippingAddress'],
-          'myItems': myItems, // Items dari toko ini
-          'status': data['status'],
-          'courier': data['courier'],
-          'trackingNumber': data['trackingNumber'],
-          'createdAt': data['createdAt'],
-        };
-      }).toList();
-    });
+            // 🔥 Filter item milik toko ini
+            final myItems = (data['items'] as List)
+                .where((item) => item['tokoId'] == tokoId)
+                .toList();
+
+            return {
+              'id': doc.id,
+              'orderId': data['orderId'],
+              'buyerId': data['buyerId'],
+
+              // 🔥 AMBIL DARI ADDRESS OBJECT
+              'buyerName': data['address']?['name'],
+              'buyerPhone': data['address']?['phone'],
+              'shippingAddress': data['address']?['address'],
+
+              'myItems': myItems,
+              'status': data['status'],
+              'courier': data['courier'],
+              'trackingNumber': data['trackingNumber'],
+              'createdAt': data['createdAt'],
+            };
+          }).toList();
+        });
   }
 
   // ========================================
@@ -142,7 +183,7 @@ class OrderService {
             .collection('orders')
             .doc(orderId)
             .update(updates),
-        
+
         _firestore.collection('orders').doc(orderId).update(updates),
       ]);
     } catch (e) {

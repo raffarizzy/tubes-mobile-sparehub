@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:tubes_sparehub/models/product_model.dart';
 import 'package:tubes_sparehub/services/product_service.dart';
+import 'package:tubes_sparehub/services/fix_upload_url.dart';
 
 class EditProdukPage extends StatefulWidget {
   final ProductModel product;
@@ -34,11 +35,11 @@ class _EditProdukPageState extends State<EditProdukPage> {
     hargaCtrl = TextEditingController(text: widget.product.harga.toString());
     stokCtrl = TextEditingController(text: widget.product.stok.toString());
     deskripsiCtrl = TextEditingController(text: widget.product.deskripsi);
-    
+
     // Validasi kategori
     const validKategori = ['mesin', 'body', 'roda', 'lainnya'];
-    kategori = validKategori.contains(widget.product.kategori) 
-        ? widget.product.kategori 
+    kategori = validKategori.contains(widget.product.kategori)
+        ? widget.product.kategori
         : null;
   }
 
@@ -57,15 +58,30 @@ class _EditProdukPageState extends State<EditProdukPage> {
   }
 
   Future<String?> _uploadImage(File image) async {
-    final uri = Uri.parse('https://api.imgbb.com/1/upload?key=c691b5cbc2f340e04d70a6911e17d5e8');
-    final request = http.MultipartRequest('POST', uri);
-    request.files.add(await http.MultipartFile.fromPath('image', image.path));
-    
+    final uri = Uri.parse(
+      'https://api.imgbb.com/1/upload?key=c691b5cbc2f340e04d70a6911e17d5e8',
+    );
+
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(await http.MultipartFile.fromPath('image', image.path));
+
     final response = await request.send();
-    final data = await response.stream.bytesToString();
-    final decoded = json.decode(data);
-    
-    return response.statusCode == 200 ? decoded['data']['url'] : null;
+    final responseBody = await response.stream.bytesToString();
+    final decoded = json.decode(responseBody);
+
+    if (response.statusCode != 200) {
+      return null;
+    }
+
+    // 🔹 Ambil raw URL
+    final rawUrl = decoded['data']['url'] as String?;
+
+    if (rawUrl == null) return null;
+
+    // 🔥 FIX URL LEWAT SERVICE
+    final fixedUrl = FixUploadUrl().fixImgBBUrl(rawUrl);
+
+    return fixedUrl;
   }
 
   Future<void> _submit() async {
@@ -79,9 +95,9 @@ class _EditProdukPageState extends State<EditProdukPage> {
       if (_image != null) {
         final uploaded = await _uploadImage(_image!);
         if (uploaded == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Upload gambar gagal')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Upload gambar gagal')));
           setState(() => _loading = false);
           return;
         }
@@ -102,14 +118,14 @@ class _EditProdukPageState extends State<EditProdukPage> {
 
       if (mounted) {
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Produk berhasil diperbarui')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Produk berhasil diperbarui')));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       setState(() => _loading = false);
     }
@@ -140,9 +156,14 @@ class _EditProdukPageState extends State<EditProdukPage> {
             SizedBox(height: 16),
             _buildField(deskripsiCtrl, 'Deskripsi', maxLines: 5),
             SizedBox(height: 20),
-            Text('Gambar Produk',
-                style: TextStyle(
-                    color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w600)), // Text hitam
+            Text(
+              'Gambar Produk',
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ), // Text hitam
             SizedBox(height: 12),
             _buildImagePicker(),
             SizedBox(height: 30),
@@ -153,8 +174,12 @@ class _EditProdukPageState extends State<EditProdukPage> {
     );
   }
 
-  Widget _buildField(TextEditingController ctrl, String hint,
-      {bool isNumber = false, int maxLines = 1}) {
+  Widget _buildField(
+    TextEditingController ctrl,
+    String hint, {
+    bool isNumber = false,
+    int maxLines = 1,
+  }) {
     return TextFormField(
       controller: ctrl,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
@@ -231,25 +256,33 @@ class _EditProdukPageState extends State<EditProdukPage> {
         child: _image != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.file(_image!, fit: BoxFit.cover))
+                child: Image.file(_image!, fit: BoxFit.cover),
+              )
             : widget.product.imageUrl.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(widget.product.imageUrl,
-                        fit: BoxFit.cover))
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_a_photo,
-                            size: 60, color: Colors.grey.shade400), // Icon abu
-                        SizedBox(height: 8),
-                        Text('Pilih Gambar',
-                            style: TextStyle(
-                                color: Colors.grey.shade600)), // Text abu
-                      ],
-                    ),
-                  ),
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  widget.product.imageUrl,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.add_a_photo,
+                      size: 60,
+                      color: Colors.grey.shade400,
+                    ), // Icon abu
+                    SizedBox(height: 8),
+                    Text(
+                      'Pilih Gambar',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ), // Text abu
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -266,10 +299,19 @@ class _EditProdukPageState extends State<EditProdukPage> {
           ? SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-          : Text('Simpan Produk',
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          : Text(
+              'Simpan Produk',
               style: TextStyle(
-                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
     );
   }
 }
