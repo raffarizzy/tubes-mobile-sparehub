@@ -28,7 +28,6 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // ✅ Init deep link HANYA SEKALI di sini
     WidgetsBinding.instance.addPostFrameCallback((_) {
       DeepLinkHandler.initDeepLinks(context);
     });
@@ -132,6 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
         children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        selectedItemColor: const Color(0xFF122C4F),
         currentIndex: _selectedIndex,
         onTap: (index) {
           if (index == 0) {

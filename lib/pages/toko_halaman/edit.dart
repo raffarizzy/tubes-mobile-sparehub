@@ -73,12 +73,10 @@ class _EditProdukPageState extends State<EditProdukPage> {
       return null;
     }
 
-    // 🔹 Ambil raw URL
     final rawUrl = decoded['data']['url'] as String?;
 
     if (rawUrl == null) return null;
 
-    // 🔥 FIX URL LEWAT SERVICE
     final fixedUrl = FixUploadUrl().fixImgBBUrl(rawUrl);
 
     return fixedUrl;

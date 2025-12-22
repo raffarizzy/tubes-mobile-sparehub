@@ -12,7 +12,7 @@ class Lacak extends StatelessWidget {
       backgroundColor: Color(0xFFF4F8FF),
       appBar: AppBar(
         backgroundColor: Color(0xFF0B2C54),
-        title: Text('Lacak Pesanan', style: TextStyle(color: Colors.white)),
+        title: Text('Pesanan', style: TextStyle(color: Colors.white)),
         iconTheme: IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<List<Map<String, dynamic>>>(

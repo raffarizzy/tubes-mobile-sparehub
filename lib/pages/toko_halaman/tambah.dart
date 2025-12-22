@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:tubes_sparehub/data/ProductData.dart';
+import 'package:tubes_sparehub/services/fix_upload_url.dart';
 
 class Tambah extends StatefulWidget {
   @override
@@ -61,7 +62,9 @@ class _Tambah extends State<Tambah> {
     final decoded = json.decode(responseData);
 
     if (response.statusCode == 200) {
-      return decoded['data']['url'];
+      String rawURL = decoded['data']['url'];
+      String fixedURL = FixUploadUrl().fixImgBBUrl(rawURL);
+      return fixedURL;
     }
     return null;
   }
