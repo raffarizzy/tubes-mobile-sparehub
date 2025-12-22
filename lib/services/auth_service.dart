@@ -17,7 +17,6 @@ class AuthService {
     required String email,
     required String password,
     required String nama,
-    required String alamat,
   }) async {
     try {
       // Create user di Firebase Auth
@@ -31,7 +30,6 @@ class AuthService {
         id: userCredential.user!.uid,
         nama: nama,
         email: email,
-        alamat: alamat,
         imagePath: 'assets/images/profile1.png',
       );
 

@@ -8,7 +8,10 @@ class UserService {
   // Get user by ID
   Future<UserModel?> getUserById(String userId) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection(collectionName).doc(userId).get();
+      DocumentSnapshot doc = await _firestore
+          .collection(collectionName)
+          .doc(userId)
+          .get();
       if (doc.exists) {
         return UserModel.fromFirestore(doc);
       }
@@ -21,11 +24,9 @@ class UserService {
 
   // Stream user by ID (real-time)
   Stream<UserModel?> streamUserById(String userId) {
-    return _firestore
-        .collection(collectionName)
-        .doc(userId)
-        .snapshots()
-        .map((doc) {
+    return _firestore.collection(collectionName).doc(userId).snapshots().map((
+      doc,
+    ) {
       if (doc.exists) {
         return UserModel.fromFirestore(doc);
       }
@@ -58,9 +59,25 @@ class UserService {
   // Create new user
   Future<void> createUser(String userId, UserModel user) async {
     try {
-      await _firestore.collection(collectionName).doc(userId).set(user.toFirestore());
+      await _firestore
+          .collection(collectionName)
+          .doc(userId)
+          .set(user.toFirestore());
     } catch (e) {
       print('Error creating user: $e');
+      rethrow;
+    }
+  }
+
+  // Update foto profil user
+  Future<void> updateProfileImage(String userId, String imageUrl) async {
+    try {
+      await _firestore.collection(collectionName).doc(userId).update({
+        'imagePath': imageUrl,
+        'updatedAt': FieldValue.serverTimestamp(), // opsional
+      });
+    } catch (e) {
+      print('Error updating profile image: $e');
       rethrow;
     }
   }

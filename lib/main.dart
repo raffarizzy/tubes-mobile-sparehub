@@ -104,7 +104,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _pages = [
       toko_saya(),
       const HomePage(),
-      HalamanSaya(userData: _currentUserData),
+      HalamanSaya(),
     ];
   }
 

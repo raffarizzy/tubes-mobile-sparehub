@@ -4,16 +4,30 @@ class UserModel {
   final String id;
   final String nama;
   final String email;
-  final String alamat;
   final String? imagePath;
 
   UserModel({
     required this.id,
     required this.nama,
     required this.email,
-    required this.alamat,
     this.imagePath,
   });
+
+  UserModel copyWith({
+    String? id,
+    String? nama,
+    String? email,
+    String? alamat,
+    String? imagePath,
+  }) {
+    return UserModel(
+      id : id ?? this.id,
+      nama: nama ?? this.nama,
+      email: email ?? this.email,
+      imagePath: imagePath ?? this.imagePath,
+    );
+  }
+
 
   // Convert from Firestore document
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -22,7 +36,6 @@ class UserModel {
       id: doc.id,
       nama: data['nama'] ?? '',
       email: data['email'] ?? '',
-      alamat: data['alamat'] ?? '',
       imagePath: data['imagePath'],
     );
   }
@@ -32,7 +45,6 @@ class UserModel {
     return {
       'nama': nama,
       'email': email,
-      'alamat': alamat,
       'imagePath': imagePath ?? 'assets/images/profile1.png',
     };
   }
@@ -43,7 +55,6 @@ class UserModel {
       'id': id,
       'nama': nama,
       'email': email,
-      'alamat': alamat,
       'imagePath': imagePath ?? 'assets/images/profile1.png',
     };
   }

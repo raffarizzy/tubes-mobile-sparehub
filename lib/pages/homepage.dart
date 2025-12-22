@@ -341,62 +341,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Section Alamat
-                    if (user != null)
-                      StreamBuilder<UserModel?>(
-                        stream: _userService.streamUserById(user.uid),
-                        builder: (context, snapshot) {
-                          String lokasi =
-                              snapshot.data?.alamat ?? 'Belum ada alamat';
-
-                          return Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1A3A5F),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                      'Alamat',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () =>
-                                          _showEditLokasiDialog(lokasi),
-                                      child: const Icon(
-                                        Icons.edit,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  lokasi,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),  
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    const SizedBox(height: 16),
-
                     // Search Bar
                     Row(
                       children: [
@@ -665,38 +609,51 @@ class _HomePageState extends State<HomePage> {
                                               12,
                                             ),
                                             child: Image.network(
-  product.imagePath.isNotEmpty
-      ? product.imagePath
-      : 'https://via.placeholder.com/300x200?text=No+Image',
-  fit: BoxFit.cover,
-  width: double.infinity,
-  errorBuilder: (context, error, stackTrace) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.image_not_supported,
-          size: 50,
-          color: Colors.grey[600],
-        ),
-      ),
-    );
-  },
-  loadingBuilder: (context, child, loadingProgress) {
-    if (loadingProgress == null) return child;
-    return Container(
-      width: double.infinity,
-      height: 200,
-      alignment: Alignment.center,
-      child: CircularProgressIndicator(),
-    );
-  },
-),
-
+                                              product.imagePath.isNotEmpty
+                                                  ? product.imagePath
+                                                  : 'https://via.placeholder.com/300x200?text=No+Image',
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return Container(
+                                                      width: double.infinity,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.grey[300],
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      child: Center(
+                                                        child: Icon(
+                                                          Icons
+                                                              .image_not_supported,
+                                                          size: 50,
+                                                          color:
+                                                              Colors.grey[600],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                              loadingBuilder:
+                                                  (
+                                                    context,
+                                                    child,
+                                                    loadingProgress,
+                                                  ) {
+                                                    if (loadingProgress == null)
+                                                      return child;
+                                                    return Container(
+                                                      width: double.infinity,
+                                                      height: 200,
+                                                      alignment:
+                                                          Alignment.center,
+                                                      child:
+                                                          CircularProgressIndicator(),
+                                                    );
+                                                  },
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(height: 8),
