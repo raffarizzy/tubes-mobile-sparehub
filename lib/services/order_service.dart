@@ -158,6 +158,23 @@ class OrderService {
         });
   }
 
+  static Stream<List<Map<String, dynamic>>> streamUserOrders() {
+    final uid = AuthService().currentUser!.uid;
+
+    return FirebaseFirestore.instance
+        .collection('orders')
+        .where('buyerId', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['orderId'] = doc.id;
+            return data;
+          }).toList();
+        });
+  }
+
   // ========================================
   // UPDATE STATUS
   // ========================================
