@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:tubes_sparehub/services/user_service.dart';
 import 'package:tubes_sparehub/services/auth_service.dart';
 import 'package:tubes_sparehub/services/address_service.dart';
+import 'package:tubes_sparehub/services/fix_upload_url.dart';
 import 'package:tubes_sparehub/models/user_model.dart';
 
 class EditProfil extends StatefulWidget {
@@ -19,9 +20,13 @@ class EditProfil extends StatefulWidget {
 class _EditProfilState extends State<EditProfil> {
   final UserService _userService = UserService();
   final AuthService _authService = AuthService();
+  final FixUploadUrl _fixUploadUrlService = FixUploadUrl();
 
   late TextEditingController _namaController;
   late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  String? _selectedGender;
+  DateTime? _birthDate;
 
   UserModel? _currentUser;
   bool _isLoading = false;
@@ -34,6 +39,7 @@ class _EditProfilState extends State<EditProfil> {
     super.initState();
     _namaController = TextEditingController();
     _emailController = TextEditingController();
+    _phoneController = TextEditingController();
     _loadUserData();
     _loadAddresses();
   }
@@ -48,6 +54,9 @@ class _EditProfilState extends State<EditProfil> {
           _currentUser = userData;
           _namaController.text = userData.nama;
           _emailController.text = userData.email;
+          _phoneController.text = userData.phone ?? '';
+          _selectedGender = userData.gender;
+          _birthDate = userData.birthDate;
         });
       }
     }
@@ -308,8 +317,13 @@ class _EditProfilState extends State<EditProfil> {
     final responseData = await response.stream.bytesToString();
 
     if (response.statusCode == 200) {
-      print("IMG URL: ${jsonDecode(responseData)['data']}");
-      return jsonDecode(responseData)['data']['url'];
+      final rawUrl = jsonDecode(responseData)['data']['url'];
+      final fixedUrl = _fixUploadUrlService.fixImgBBUrl(rawUrl);
+
+      print("IMG URL RAW   : $rawUrl");
+      print("IMG URL FIXED: $fixedUrl");
+
+      return fixedUrl;
     }
     throw Exception("Upload gagal");
   }
@@ -345,6 +359,9 @@ class _EditProfilState extends State<EditProfil> {
       await _userService.updateUser(user.uid, {
         'nama': _namaController.text.trim(),
         'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'gender': _selectedGender,
+        'birthDate': _birthDate,
       });
 
       if (mounted) Navigator.pop(context, true);
@@ -386,6 +403,16 @@ class _EditProfilState extends State<EditProfil> {
                           _field(_namaController, "Nama", Icons.person),
                           const SizedBox(height: 16),
                           _field(_emailController, "Email", Icons.email),
+                          const SizedBox(height: 16),
+                          _field(
+                            _phoneController,
+                            "No. Handphone",
+                            Icons.phone,
+                          ),
+                          const SizedBox(height: 16),
+                          _genderDropdown(),
+                          const SizedBox(height: 16),
+                          _birthDatePicker(),
                           const SizedBox(height: 24),
                           _alamatSection(),
                           const SizedBox(height: 32),
@@ -434,6 +461,56 @@ class _EditProfilState extends State<EditProfil> {
     );
   }
 
+  Widget _genderDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedGender,
+      items: const [
+        DropdownMenuItem(value: "Laki-laki", child: Text("Laki-laki")),
+        DropdownMenuItem(value: "Perempuan", child: Text("Perempuan")),
+      ],
+      onChanged: (value) {
+        setState(() => _selectedGender = value);
+      },
+      decoration: InputDecoration(
+        labelText: "Jenis Kelamin",
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
+  }
+
+  Widget _birthDatePicker() {
+    return InkWell(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: _birthDate ?? DateTime(2000),
+          firstDate: DateTime(1950),
+          lastDate: DateTime.now(),
+        );
+
+        if (picked != null) {
+          setState(() => _birthDate = picked);
+        }
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: "Tanggal Lahir",
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: Text(
+          _birthDate == null
+              ? "Pilih tanggal"
+              : "${_birthDate!.day}/${_birthDate!.month}/${_birthDate!.year}",
+          style: const TextStyle(fontSize: 16),
+        ),
+      ),
+    );
+  }
+
   Widget _alamatSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,10 +544,34 @@ class _EditProfilState extends State<EditProfil> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (addr['isDefault'] == true)
-                            const Padding(
-                              padding: EdgeInsets.only(right: 6),
-                              child: Chip(label: Text("Utama")),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Chip(
+                                label: const Text(
+                                  "Utama",
+                                  style: TextStyle(
+                                    color: Color(0xFF3B82F6), // biru teks
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                backgroundColor: const Color(
+                                  0xFFEFF6FF,
+                                ), // biru muda
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: const BorderSide(
+                                    color: Color(0xFF93C5FD), // border biru
+                                  ),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
                             ),
+
                           IconButton(
                             icon: const Icon(
                               Icons.edit,
