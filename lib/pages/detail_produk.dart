@@ -10,7 +10,6 @@ import 'package:tubes_sparehub/models/toko_model.dart';
 import 'package:tubes_sparehub/models/rating_model.dart';
 import 'package:tubes_sparehub/models/product_model.dart';
 import 'package:tubes_sparehub/models/keranjang_model.dart';
-import 'package:tubes_sparehub/widgets/review_dialog.dart';
 import 'package:tubes_sparehub/widgets/product_recommendations.dart';
 
 // Halaman Detail Produk - Menampilkan informasi lengkap produk
@@ -270,30 +269,53 @@ class _DetailProdukState extends State<DetailProduk> {
                                 child: Container(
                                   height: 200,
                                   padding: const EdgeInsets.all(20),
-                                  child: Image.asset(
-                                    // Ambil path gambar dari data produk
-                                    widget.product['imagePath'] ??
-                                        'assets/images/oliMobil.png',
-                                    fit: BoxFit.contain,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      // Ambil URL gambar dari data produk
+                                      widget.product['imagePath'] != null &&
+                                              widget.product['imagePath']
+                                                  .toString()
+                                                  .isNotEmpty
+                                          ? widget.product['imagePath']
+                                          : 'https://via.placeholder.com/300x200?text=No+Image',
+                                      fit: BoxFit.contain,
+                                      width: double.infinity,
 
-                                    // Error handler jika gambar tidak ditemukan
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[400],
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.motorcycle,
-                                            size: 120,
-                                            color: Colors.white70,
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                      // Error handler jika gambar tidak ditemukan
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Container(
+                                              width: double.infinity,
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey[300],
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Center(
+                                                child: Icon(
+                                                  Icons.motorcycle,
+                                                  size: 80,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            );
+                                          },
+
+                                      // Loading indicator saat gambar dimuat
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return Container(
+                                              width: double.infinity,
+                                              height: 200,
+                                              alignment: Alignment.center,
+                                              child:
+                                                  const CircularProgressIndicator(),
+                                            );
+                                          },
+                                    ),
                                   ),
                                 ),
                               ),
