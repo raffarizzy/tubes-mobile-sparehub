@@ -98,7 +98,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Stok tidak mencukupi. Maksimal: $stokTersedia unit'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.blue,
           ),
         );
         return;
@@ -316,8 +316,10 @@ class _KeranjangPageState extends State<KeranjangPage> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
-                child: Image.asset(
-                  produk.imagePath,
+                child: Image.network(
+                  produk.imagePath.isNotEmpty
+                      ? produk.imagePath
+                      : 'https://via.placeholder.com/300x200?text=No+Image',
                   width: 75,
                   height: 75,
                   fit: BoxFit.cover,
@@ -326,13 +328,29 @@ class _KeranjangPageState extends State<KeranjangPage> {
                       width: 75,
                       height: 75,
                       decoration: BoxDecoration(
-                        color: Colors.grey[400],
+                        color: Colors.grey[300],
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.motorcycle,
-                        size: 40,
-                        color: Colors.white70,
+                      child: Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 40,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 75,
+                      height: 75,
+                      alignment: Alignment.center,
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
                       ),
                     );
                   },
