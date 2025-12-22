@@ -44,6 +44,23 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
     }
   }
 
+  String _formatStatus(String status) {
+    switch (status) {
+      case 'menungguKonfirmasi':
+        return 'Menunggu Konfirmasi';
+      case 'diproses':
+        return 'Sedang Diproses';
+      case 'dikirim':
+        return 'Sedang Dikirim';
+      case 'selesai':
+        return 'Selesai';
+      case 'dibatalkan':
+        return 'Dibatalkan';
+      default:
+        return status;
+    }
+  }
+
   Color _getStatusColor(String status) {
     switch (status) {
       case 'selesai':
@@ -154,7 +171,7 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            order['status'],
+                            _formatStatus(order['status']),
                             style: TextStyle(
                               color: _getStatusColor(order['status']),
                               fontWeight: FontWeight.w600,
@@ -197,13 +214,15 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
               ),
               const Divider(height: 30),
 
-              // Info Order
+              // INFO ORDER
               _detailRow('Order ID', order['orderId']),
               _detailRow('Tanggal', _formatDate(order['createdAt'])),
               _detailRow('Status', order['status']),
               _detailRow('Total', _formatRupiah(order['totalAmount'])),
 
               const SizedBox(height: 20),
+
+              // ALAMAT
               const Text(
                 'Alamat Pengiriman',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -214,13 +233,14 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
               Text('No. HP: ${order['address']['phone'] ?? '-'}'),
 
               const SizedBox(height: 20),
+
+              // PRODUK
               const Text(
                 'Produk',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
 
-              // List items
               ...(order['items'] as List<dynamic>).map(
                 (item) => Card(
                   margin: const EdgeInsets.only(bottom: 8),
@@ -240,91 +260,93 @@ class _RiwayatPesananState extends State<RiwayatPesanan> {
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
 
-              // Tombol Review untuk setiap produk
-              const Text(
-                'Review Produk',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 30),
 
-              // List tombol review untuk setiap produk
-              ...(order['items'] as List<dynamic>).map((item) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Builder(
-                    builder: (btnContext) {
-                      return ElevatedButton(
-                        onPressed: () async {
-                          // Cek apakah item punya produkId atau id
-                          String? produkId = item['id']?.toString();
+              // ===============================
+              // TERIMA PESANAN (HANYA JIKA DIKIRIM)
+              // ===============================
+              if (order['status'] == 'dikirim') ...[
+                ElevatedButton(
+                  onPressed: () async {
+                    await OrderService.updateOrderStatus(
+                      orderId: order['orderId'],
+                      buyerId: AuthService().currentUser!.uid,
+                      status: 'selesai',
+                    );
 
-                          print('DEBUG: Attempting to review product');
-                          print('DEBUG: Product ID: $produkId');
-                          print('DEBUG: Item data: $item');
-                          print('DEBUG: All order data: $order');
+                    if (mounted) {
+                      Navigator.pop(context);
+                      _loadOrders();
+                    }
 
-                          if (produkId == null || produkId.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Maaf, order ini dibuat sebelum sistem review. Silakan buat order baru untuk review produk.',
-                                ),
-                                backgroundColor: Colors.orange,
-                                duration: Duration(seconds: 4),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final user = AuthService().currentUser;
-                          if (user != null) {
-                            final hasReviewed = await RatingService()
-                                .hasUserReviewedProduct(user.uid, produkId);
-
-                            if (hasReviewed) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Anda sudah memberikan review untuk produk ini',
-                                  ),
-                                  backgroundColor: Colors.blue,
-                                  duration: Duration(seconds: 3),
-                                ),
-                              );
-                              return;
-                            }
-                          }
-
-                          // Show dialog dengan rootNavigator agar muncul di atas bottom sheet
-                          showDialog(
-                            context: context,
-                            barrierDismissible: true,
-                            builder: (dialogContext) {
-                              print(
-                                'DEBUG: Dialog builder called with Product ID: $produkId',
-                              );
-                              return ReviewDialog(produkId: produkId);
-                            },
-                          ).then((value) {
-                            // Tutup bottom sheet setelah dialog ditutup
-                            Navigator.pop(context);
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.amber,
-                          minimumSize: const Size(double.infinity, 45),
-                        ),
-                        child: Text(
-                          'Review: ${item['nama'] ?? 'Produk'}',
-                          style: const TextStyle(color: Color(0xFF122C4F)),
-                        ),
-                      );
-                    },
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Pesanan berhasil diterima'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    minimumSize: const Size(double.infinity, 45),
                   ),
-                );
-              }),
+                  child: const Text(
+                    'Terima Pesanan',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+
+              // ===============================
+              // REVIEW PRODUK (HANYA JIKA SELESAI)
+              // ===============================
+              if (order['status'] == 'selesai') ...[
+                const SizedBox(height: 24),
+                const Text(
+                  'Review Produk',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+
+                ...(order['items'] as List<dynamic>).map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final produkId = item['id']?.toString();
+                        if (produkId == null) return;
+
+                        final user = AuthService().currentUser!;
+                        final hasReviewed = await RatingService()
+                            .hasUserReviewedProduct(user.uid, produkId);
+
+                        if (hasReviewed) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Produk ini sudah direview'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        showDialog(
+                          context: context,
+                          builder: (_) => ReviewDialog(produkId: produkId),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        minimumSize: const Size(double.infinity, 45),
+                      ),
+                      child: Text(
+                        'Review: ${item['nama']}',
+                        style: const TextStyle(color: Color(0xFF122C4F)),
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ],
           ),
         ),
