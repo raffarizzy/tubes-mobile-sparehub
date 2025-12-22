@@ -4,8 +4,10 @@ import 'package:tubes_sparehub/pages/keranjang.dart'; // TAMBAHAN IMPORT
 import 'package:tubes_sparehub/services/product_service.dart';
 import 'package:tubes_sparehub/services/user_service.dart';
 import 'package:tubes_sparehub/services/auth_service.dart';
+import 'package:tubes_sparehub/services/rating_service.dart';
 import 'package:tubes_sparehub/models/product_model.dart';
 import 'package:tubes_sparehub/models/user_model.dart';
+import 'package:tubes_sparehub/models/rating_model.dart';
 
 class HomePage extends StatefulWidget {
   // Opsional: terima data user dari login (kalo mau dipake)
@@ -21,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   final ProductService _productService = ProductService();
   final UserService _userService = UserService();
   final AuthService _authService = AuthService();
+  final RatingService _ratingService = RatingService();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _lokasiController = TextEditingController();
 
@@ -339,62 +342,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-
-                    // Section Alamat
-                    if (user != null)
-                      StreamBuilder<UserModel?>(
-                        stream: _userService.streamUserById(user.uid),
-                        builder: (context, snapshot) {
-                          String lokasi =
-                              snapshot.data?.alamat ?? 'Belum ada alamat';
-
-                          return Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1A3A5F),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                      'Alamat',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () =>
-                                          _showEditLokasiDialog(lokasi),
-                                      child: const Icon(
-                                        Icons.edit,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  lokasi,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
                     const SizedBox(height: 16),
 
                     // Search Bar
@@ -731,50 +678,128 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                         const SizedBox(height: 4),
 
-                                        // Rating
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.yellow[700],
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                        // Rating - Ambil dari Firestore
+                                        StreamBuilder<List<RatingModel>>(
+                                          stream: _ratingService
+                                              .getRatingsByProductId(
+                                                product.id,
                                               ),
-                                              child: const Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.star,
-                                                    size: 12,
-                                                    color: Colors.white,
-                                                  ),
-                                                  Text(
-                                                    '5',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                          builder: (context, ratingSnapshot) {
+                                            double avgRating = 0.0;
+                                            int totalReviews = 0;
+
+                                            if (ratingSnapshot.hasData &&
+                                                ratingSnapshot
+                                                    .data!
+                                                    .isNotEmpty) {
+                                              List<RatingModel> ratings =
+                                                  ratingSnapshot.data!;
+                                              totalReviews = ratings.length;
+                                              avgRating =
+                                                  ratings.fold(
+                                                    0.0,
+                                                    (sum, r) => sum + r.rating,
+                                                  ) /
+                                                  totalReviews;
+                                            }
+
+                                            return Row(
+                                              children: [
+                                                // Rating badge
+                                                if (totalReviews > 0)
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.yellow[700],
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        const Icon(
+                                                          Icons.star,
+                                                          size: 12,
+                                                          color: Colors.white,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 2,
+                                                        ),
+                                                        Text(
+                                                          avgRating
+                                                              .toStringAsFixed(
+                                                                1,
+                                                              ),
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            const Icon(
-                                              Icons.location_on,
-                                              size: 12,
-                                              color: Color(0xFF122C4F),
-                                            ),
-                                            const Text(
-                                              "Jakarta",
-                                              style: TextStyle(fontSize: 12),
-                                            ),
-                                          ],
+
+                                                // No rating badge
+                                                if (totalReviews == 0)
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.grey[400],
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: const Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.star_border,
+                                                          size: 12,
+                                                          color: Colors.white,
+                                                        ),
+                                                        SizedBox(width: 2),
+                                                        Text(
+                                                          'Belum ada',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+
+                                                const SizedBox(width: 6),
+                                                const Icon(
+                                                  Icons.location_on,
+                                                  size: 12,
+                                                  color: Color(0xFF122C4F),
+                                                ),
+                                                const Text(
+                                                  "Jakarta",
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          },
                                         ),
                                       ],
                                     ),

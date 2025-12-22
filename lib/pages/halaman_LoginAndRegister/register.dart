@@ -17,7 +17,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-  final TextEditingController _alamatController = TextEditingController();
 
   // Auth service
   final AuthService _authService = AuthService();
@@ -33,14 +32,12 @@ class _RegisterPageState extends State<RegisterPage> {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
     String confirmPassword = _confirmPasswordController.text.trim();
-    String alamat = _alamatController.text.trim();
 
     // Validasi input kosong
     if (nama.isEmpty ||
         email.isEmpty ||
         password.isEmpty ||
-        confirmPassword.isEmpty ||
-        alamat.isEmpty) {
+        confirmPassword.isEmpty) {
       _showErrorDialog('Semua field harus diisi!');
       return;
     }
@@ -73,7 +70,6 @@ class _RegisterPageState extends State<RegisterPage> {
         email: email,
         password: password,
         nama: nama,
-        alamat: alamat,
       );
 
   
@@ -142,7 +138,6 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _alamatController.dispose();
     super.dispose();
   }
 
@@ -231,33 +226,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     hintText: 'Masukkan email',
                     prefixIcon: const Icon(
                       Icons.email,
-                      color: Color(0xFF122C4F),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF122C4F),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Alamat TextField
-                TextField(
-                  controller: _alamatController,
-                  decoration: InputDecoration(
-                    labelText: 'Alamat',
-                    hintText: 'Masukkan alamat',
-                    prefixIcon: const Icon(
-                      Icons.location_on,
                       color: Color(0xFF122C4F),
                     ),
                     border: OutlineInputBorder(

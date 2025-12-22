@@ -27,11 +27,15 @@ class ProductRecommendations extends StatelessWidget {
         List<ProductModel> allProducts = snapshot.data!;
 
         // Filter: exclude current product and match kategori if available
-        List<ProductModel> recommendations = allProducts.where((product) {
-          if (product.id == currentProductId) return false;
-          if (kategori != null && product.kategori != kategori) return false;
-          return true;
-        }).take(4).toList(); // Limit to 4 recommendations
+        List<ProductModel> recommendations = allProducts
+            .where((product) {
+              if (product.id == currentProductId) return false;
+              if (kategori != null && product.kategori != kategori)
+                return false;
+              return true;
+            })
+            .take(4)
+            .toList(); // Limit to 4 recommendations
 
         if (recommendations.isEmpty) {
           return SizedBox.shrink();
@@ -64,9 +68,8 @@ class ProductRecommendations extends StatelessWidget {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => DetailProduk(
-                            product: product.toMap(),
-                          ),
+                          builder: (context) =>
+                              DetailProduk(product: product.toMap()),
                         ),
                       );
                     },
@@ -93,12 +96,15 @@ class ProductRecommendations extends StatelessWidget {
                               borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(12),
                               ),
-                              child: Image.asset(
+                              child: Image.network(
+                                // Ambil URL gambar dari data produk
                                 product.imagePath.isNotEmpty
                                     ? product.imagePath
-                                    : 'assets/images/oliMobil.png',
+                                    : 'https://via.placeholder.com/300x200?text=No+Image',
                                 width: double.infinity,
                                 fit: BoxFit.cover,
+
+                                // Error handler jika gambar gagal dimuat
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
                                     width: double.infinity,
@@ -117,6 +123,28 @@ class ProductRecommendations extends StatelessWidget {
                                     ),
                                   );
                                 },
+
+                                // Loading indicator saat gambar dimuat
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        width: double.infinity,
+                                        alignment: Alignment.center,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          value:
+                                              loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                              : null,
+                                        ),
+                                      );
+                                    },
                               ),
                             ),
                           ),
