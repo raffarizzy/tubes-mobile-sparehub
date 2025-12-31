@@ -348,29 +348,6 @@ flutter pub get
 flutter run
 ```
 
-## Testing
-
-### Unit Testing
-```bash
-flutter test
-```
-
-### Manual Testing
-1. Test authentication flow (register/login)
-2. Test product browsing dan filter
-3. Test cart operations
-4. Test checkout dan payment
-5. Test order tracking
-6. Test seller features
-
-## Contributing
-
-1. Fork repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
-
 ## License
 
 Project ini dibuat untuk keperluan tugas kuliah.
