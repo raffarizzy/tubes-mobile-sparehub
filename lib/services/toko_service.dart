@@ -45,6 +45,21 @@ class TokoService {
   // Add new toko
   Future<String?> addToko(TokoModel toko) async {
     try {
+      //CEK NAMA TOKO SUDAH ADA ATAU BELUM
+      final query = await _firestore
+          .collection('tokos')
+          .where(
+            'namaToko',
+            isEqualTo: toko.namaToko,
+          )
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        throw 'Nama toko sudah digunakan';
+      }
+
+      //SIMPAN TOKO BARU
       DocumentReference docRef = await _firestore
           .collection('tokos')
           .add(toko.toFirestore());
@@ -52,9 +67,15 @@ class TokoService {
       return docRef.id;
     } catch (e) {
       print('Error adding toko: $e');
+
+      if (e is String) {
+        throw e; // pesan validasi custom
+      }
+
       throw 'Gagal menambahkan toko. Silakan coba lagi.';
     }
   }
+
 
   // Update toko
   Future<void> updateToko(TokoModel toko) async {

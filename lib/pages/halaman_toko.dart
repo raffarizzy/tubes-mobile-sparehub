@@ -69,6 +69,7 @@ class _tokoSayaState extends State<toko_saya> {
 
       if (tokos.isEmpty) {
         // User doesn't have a toko yet
+        print('USER BELUM PUNYA TOKO');
         setState(() {
           isLoading = false;
         });
@@ -202,6 +203,7 @@ class _tokoSayaState extends State<toko_saya> {
                   });
                   _loadTokoData();
                 } catch (e) {
+                  Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Gagal membuat toko: $e')),
                   );
